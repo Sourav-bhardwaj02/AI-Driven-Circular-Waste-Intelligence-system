@@ -1,17 +1,36 @@
-# Stage 1: Build
-FROM node:20-alpine AS builder
+# ---------- Stage 1: Build ----------
+FROM node:20 AS builder
+
 WORKDIR /app
+
+# Fix npm + rollup issues
+ENV NODE_OPTIONS=--openssl-legacy-provider
+
 COPY package*.json ./
-RUN npm install
+
+# Clean install (IMPORTANT)
+RUN rm -rf node_modules package-lock.json
+
+# Install dependencies properly
+RUN npm install --legacy-peer-deps
+
+# Force install correct rollup binary
+RUN npm install @rollup/rollup-linux-x64-gnu --save-optional
+
 COPY . .
+
 RUN npm run build
 
-# Stage 2: Production
-FROM node:20-alpine AS production
+
+# ---------- Stage 2: Production ----------
+FROM node:20
+
 WORKDIR /app
 
 RUN npm install -g serve
+
 COPY --from=builder /app/dist ./dist
 
 EXPOSE 5173
+
 CMD ["serve", "-s", "dist", "-l", "5173"]

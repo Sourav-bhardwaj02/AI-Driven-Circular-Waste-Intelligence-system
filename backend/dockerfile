@@ -1,16 +1,40 @@
-# Stage 1: Build
-FROM node:20-alpine AS builder
+# ---------- Stage 1: Build ----------
+FROM node:20-bullseye AS builder
+
 WORKDIR /app
+
+# Fix SSL + networking issues
+RUN apt-get update && apt-get install -y ca-certificates openssl
+
+ENV NODE_TLS_REJECT_UNAUTHORIZED=0
+ENV npm_config_strict_ssl=false
+
+# Copy dependencies
 COPY package*.json ./
-RUN npm install
+
+# Clean install (important)
+RUN rm -rf node_modules package-lock.json
+
+# Install dependencies
+RUN npm install --legacy-peer-deps
+
+# Copy source
 COPY . .
 
-# Stage 2: Production
-FROM node:20-alpine AS production
+
+# ---------- Stage 2: Production ----------
+FROM node:20-bullseye
+
 WORKDIR /app
 
+# Copy from builder
 COPY --from=builder /app /app
+
+# Remove dev deps
 RUN npm prune --production
 
+ENV NODE_ENV=production
+
 EXPOSE 5000
-CMD ["node", "server.js"]
+
+CMD ["node", "app.js"]
