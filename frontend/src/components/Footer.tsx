@@ -7,7 +7,7 @@ const Footer = () => (
         <div>
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-eco-teal flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xs">E</span>
+              <span className="text-primary-foreground font-bold text-xs">W</span>
             </div>
             <span className="font-bold text-foreground">WasteWise AI</span>
           </div>
