@@ -19,6 +19,9 @@ import { DashboardProvider } from "./context/DashboardContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import LeaderboardPage from "./pages/LeaderboardPage";
 import LiveTrackingPage from "./pages/LiveTrackingPage";
+import AboutPage from "./pages/AboutPage";
+import ContactPage from "./pages/ContactPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +67,9 @@ const AppContent = () => {
                 <Route path="/tracking" element={<LiveTrackingPage />} />
                 
         <Route path="/leaderboard" element={<LeaderboardPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
 
         <Route path="/profile" element={<ProfilePage userRole={user?.role || null} />} />
         <Route path="*" element={<NotFound />} />

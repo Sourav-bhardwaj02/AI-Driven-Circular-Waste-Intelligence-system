@@ -291,12 +291,16 @@ const CommunityPage = () => {
   };
 
   const getUserName = (grievance: Grievance) => {
-    const user = grievance.citizenId;
-    if (user.profile.firstName && user.profile.lastName) {
-      return `${user.profile.firstName} ${user.profile.lastName}`;
-    }
-    return user.username;
-  };
+  const user = grievance.citizenId;
+  const firstName = user?.profile?.firstName;
+  const lastName = user?.profile?.lastName;
+
+  if (firstName && lastName) {
+    return `${firstName} ${lastName}`;
+  }
+
+  return user?.username || "Unknown User";
+};
 
   const hasVoted = (grievance: Grievance) => {
     return grievance.votedBy.some(voter => voter._id === user?.id);
