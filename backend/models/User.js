@@ -48,6 +48,30 @@ const userSchema = new mongoose.Schema({
   assignedRoute: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Route'
+  },
+  currentLocation: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number],
+      default: [0, 0]
+    }
+  },
+  lastLocationUpdate: {
+    type: Date,
+    default: Date.now
+  },
+  vehicleNumber: String,
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  isVerified: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

@@ -186,7 +186,16 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
 router.put('/:id/vote', auth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const grievance = await Grievance.findById(req.params.id);
+    const grievanceId = req.params.id;
+    
+    if (!grievanceId || grievanceId === 'undefined') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid grievance ID'
+      });
+    }
+    
+    const grievance = await Grievance.findById(grievanceId);
 
     if (!grievance) {
       return res.status(404).json({

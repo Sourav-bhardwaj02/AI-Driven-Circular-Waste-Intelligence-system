@@ -80,25 +80,24 @@ router.get('/collectors', async (req, res) => {
       role: 'collector',
       isActive: true 
     })
-    .select('name email currentLocation vehicleNumber phone status lastLocationUpdate')
-    .populate({
-      path: 'assignedRoute',
-      select: 'routeCode name status areas'
-    });
+    .select('username email currentLocation vehicleNumber profile.phone status lastLocationUpdate profile.firstName profile.lastName');
 
     // Format collector data for frontend
     const formattedCollectors = collectors.map(collector => ({
       id: collector._id,
-      username: collector.name,
+      username: collector.username,
+      displayName: collector.profile?.firstName && collector.profile?.lastName 
+        ? `${collector.profile.firstName} ${collector.profile.lastName}` 
+        : collector.username,
       email: collector.email,
       latitude: collector.currentLocation?.coordinates?.[1] || 28.6139,
       longitude: collector.currentLocation?.coordinates?.[0] || 77.2090,
       status: collector.status || 'active',
-      currentRoute: collector.assignedRoute?.routeCode || null,
+      currentRoute: null,
       vehicleNumber: collector.vehicleNumber,
-      phone: collector.phone,
+      phone: collector.profile?.phone,
       lastLocationUpdate: collector.lastLocationUpdate || new Date(),
-      routeInfo: collector.assignedRoute || null
+      routeInfo: null
     }));
 
     res.json({
@@ -170,7 +169,7 @@ router.put('/collectors/:id/location', auth, async (req, res) => {
     }
 
     // Find and update collector
-    const collector = await User.findById(id);
+    const collector = await User.findById(id).select('username profile.firstName profile.lastName currentLocation vehicleNumber profile.phone status');
     if (!collector || collector.role !== 'collector') {
       return res.status(404).json({
         success: false,
@@ -197,11 +196,14 @@ router.put('/collectors/:id/location', auth, async (req, res) => {
     if (io) {
       io.emit('collector-location-update', {
         id: collector._id,
-        username: collector.name,
+        username: collector.username,
+        displayName: collector.profile?.firstName && collector.profile?.lastName 
+          ? `${collector.profile.firstName} ${collector.profile.lastName}` 
+          : collector.username,
         latitude,
         longitude,
         status: collector.status || 'active',
-        currentRoute: collector.assignedRoute?.routeCode || null,
+        currentRoute: null,
         vehicleNumber: collector.vehicleNumber,
         lastLocationUpdate: collector.lastLocationUpdate
       });
@@ -273,7 +275,7 @@ router.get('/optimize-route/my-route', auth, async (req, res) => {
     const userId = req.user.id;
     
     // Find the route assigned to this collector
-    const route = await Route.findOne({ collectorId: userId }).populate('assignedCollector');
+    const route = await Route.findOne({ collectorId: userId });
     if (!route) {
       return res.status(404).json({
         success: false,
