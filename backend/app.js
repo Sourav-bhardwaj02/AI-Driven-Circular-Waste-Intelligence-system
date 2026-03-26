@@ -4,7 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const connectDB = require('./config/database');
 const http = require('http');
-const socketIo = require('socket.io');
+const { initSocket } = require('./socket');
 
 // Initialize app
 const app = express();
@@ -14,12 +14,7 @@ const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 
 // Initialize Socket.IO
-const io = socketIo(server, {
-  cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
-    methods: ["GET", "POST"]
-  }
-});
+const io = initSocket(server);
 
 // Connect to database
 connectDB();
@@ -38,43 +33,13 @@ app.use((req, res, next) => {
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Socket.IO connection handling
-io.on('connection', (socket) => {
-  console.log(`🔌 User connected: ${socket.id}`);
-
-  // Join rooms based on user role
-  socket.on('join-collector-room', (userId) => {
-    socket.join(`collector-${userId}`);
-    console.log(`🚛 Collector ${userId} joined room`);
-  });
-
-  socket.on('join-tracking-room', () => {
-    socket.join('tracking-room');
-    console.log(`👁️ User joined tracking room`);
-  });
-
-  // Handle real-time location updates
-  socket.on('location-update', (data) => {
-    socket.broadcast.emit('collector-location-update', data);
-  });
-
-  // Handle waste collection updates
-  socket.on('waste-collection-update', (data) => {
-    socket.to('tracking-room').emit('collection-status-update', data);
-  });
-
-  // Handle disconnection
-  socket.on('disconnect', () => {
-    console.log(`❌ User disconnected: ${socket.id}`);
-  });
-});
-
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/citizen', require('./routes/citizen'));
 app.use('/api/collector', require('./routes/collector'));
 app.use('/api/tracking', require('./routes/tracking'));
+app.use('/api/community', require('./routes/community'));
 app.use('/api/leaderboard', require('./routes/leaderboard'));
 app.use('/api/grievance', require('./routes/grievance'));
 app.use('/api/profile', require('./routes/profile'));
@@ -94,9 +59,10 @@ app.get('/', (req, res) => {
       citizen: '/api/citizen',
       collector: '/api/collector',
       tracking: '/api/tracking',
+      community: '/api/community',
       health: '/api/health'
     },
-    features: ['Live Tracking', 'Route Optimization', 'Real-time Updates']
+    features: ['Live Tracking', 'Route Optimization', 'Real-time Updates', 'Community Features']
   });
 });
 
@@ -118,6 +84,7 @@ server.listen(PORT, () => {
   console.log(`👥 Citizen API: http://localhost:${PORT}/api/citizen`);
   console.log(`🚛 Collector API: http://localhost:${PORT}/api/collector`);
   console.log(`📍 Tracking API: http://localhost:${PORT}/api/tracking`);
+  console.log(`👨‍👩‍👧‍👦 Community API: http://localhost:${PORT}/api/community`);
   console.log(`🔌 Socket.IO enabled for real-time updates`);
 });
 

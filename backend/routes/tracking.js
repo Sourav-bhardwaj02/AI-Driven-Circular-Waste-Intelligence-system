@@ -78,14 +78,36 @@ router.get('/collectors', async (req, res) => {
   try {
     const collectors = await User.find({ 
       role: 'collector',
-      location: { $exists: true }
+      isActive: true 
     })
-    .select('username profile.firstName profile.lastName location rewardPoints')
-    .populate('assignedRoute', 'routeCode name status areas');
+    .select('name email currentLocation vehicleNumber phone status lastLocationUpdate')
+    .populate({
+      path: 'assignedRoute',
+      select: 'routeCode name status areas'
+    });
+
+    // Format collector data for frontend
+    const formattedCollectors = collectors.map(collector => ({
+      id: collector._id,
+      username: collector.name,
+      email: collector.email,
+      latitude: collector.currentLocation?.coordinates?.[1] || 28.6139,
+      longitude: collector.currentLocation?.coordinates?.[0] || 77.2090,
+      status: collector.status || 'active',
+      currentRoute: collector.assignedRoute?.routeCode || null,
+      vehicleNumber: collector.vehicleNumber,
+      phone: collector.phone,
+      lastLocationUpdate: collector.lastLocationUpdate || new Date(),
+      routeInfo: collector.assignedRoute || null
+    }));
 
     res.json({
       success: true,
-      data: collectors
+      data: {
+        collectors: formattedCollectors,
+        total: formattedCollectors.length,
+        lastUpdated: new Date()
+      }
     });
   } catch (error) {
     console.error('Error fetching collectors:', error);
@@ -124,6 +146,79 @@ router.put('/location', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating location:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// @route   PUT /api/tracking/collectors/:id/location
+// @desc    Update collector's current location
+router.put('/collectors/:id/location', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { latitude, longitude, status } = req.body;
+    const userId = req.user.id;
+
+    // Check if user is updating their own location or is admin
+    if (id !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized to update this collector location'
+      });
+    }
+
+    // Find and update collector
+    const collector = await User.findById(id);
+    if (!collector || collector.role !== 'collector') {
+      return res.status(404).json({
+        success: false,
+        message: 'Collector not found'
+      });
+    }
+
+    // Update location
+    collector.currentLocation = {
+      type: 'Point',
+      coordinates: [longitude, latitude]
+    };
+    collector.lastLocationUpdate = new Date();
+    
+    if (status) {
+      collector.status = status;
+    }
+
+    await collector.save();
+
+    // Emit real-time update via socket
+    const { getIO } = require('../socket');
+    const io = getIO();
+    if (io) {
+      io.emit('collector-location-update', {
+        id: collector._id,
+        username: collector.name,
+        latitude,
+        longitude,
+        status: collector.status || 'active',
+        currentRoute: collector.assignedRoute?.routeCode || null,
+        vehicleNumber: collector.vehicleNumber,
+        lastLocationUpdate: collector.lastLocationUpdate
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: collector._id,
+        latitude,
+        longitude,
+        status: collector.status || 'active',
+        lastLocationUpdate: collector.lastLocationUpdate
+      }
+    });
+  } catch (error) {
+    console.error('Error updating collector location:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
