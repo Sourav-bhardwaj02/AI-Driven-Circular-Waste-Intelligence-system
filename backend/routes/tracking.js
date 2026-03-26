@@ -171,6 +171,96 @@ router.get('/nearby/:userId', async (req, res) => {
   }
 });
 
+// @route   GET /api/tracking/optimize-route/my-route
+// @desc    Get optimized route for the current collector
+router.get('/optimize-route/my-route', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Find the route assigned to this collector
+    const route = await Route.findOne({ collectorId: userId }).populate('assignedCollector');
+    if (!route) {
+      return res.status(404).json({
+        success: false,
+        message: 'No route assigned to this collector'
+      });
+    }
+
+    // Get waste locations for this route
+    const wasteCollections = await WasteCollection.find({
+      route: route.routeCode,
+      status: { $in: ['pending', 'in_progress'] }
+    }).select('area location status wasteTypes estimatedTime');
+
+    const grievances = await Grievance.find({
+      assignedTo: userId,
+      status: { $in: ['Pending', 'In Progress'] }
+    }).select('location category priority');
+
+    // Create optimization points
+    const locations = [
+      ...wasteCollections.map(c => ({
+        type: 'collection',
+        id: c._id,
+        area: c.area,
+        coordinates: c.location.coordinates,
+        priority: 2, // Collections have medium priority
+        estimatedTime: c.estimatedTime || 15,
+        wasteTypes: c.wasteTypes
+      })),
+      ...grievances.map(g => ({
+        type: 'grievance',
+        id: g._id,
+        area: g.location,
+        coordinates: g.coordinates,
+        priority: g.priority || 3,
+        estimatedTime: 10,
+        category: g.category
+      }))
+    ];
+
+    // Use the collector's current location as starting point
+    const startPoint = route.checkpoints && route.checkpoints.length > 0 
+      ? route.checkpoints[0].coordinates 
+      : [77.2090, 28.6139]; // Default Delhi coordinates
+
+    // Optimize route
+    const optimizedPoints = optimizeRoute(startPoint, locations);
+
+    // Create response data
+    const optimizedRoute = {
+      routeCode: route.routeCode,
+      name: route.name,
+      waypoints: optimizedPoints.map((point, index) => ({
+        id: point.id,
+        coordinates: point.coordinates,
+        area: point.area,
+        estimatedTime: point.estimatedTime,
+        order: index + 1
+      })),
+      totalTime: optimizedPoints.reduce((total, point) => total + point.estimatedTime, 0),
+      totalDistance: optimizedPoints.reduce((total, point, index) => {
+        if (index === 0) return 0;
+        return total + calculateDistance(
+          optimizedPoints[index - 1].coordinates[1], optimizedPoints[index - 1].coordinates[0],
+          point.coordinates[1], point.coordinates[0]
+        );
+      }, 0)
+    };
+
+    res.json({
+      success: true,
+      data: optimizedRoute
+    });
+  } catch (error) {
+    console.error('Error optimizing my route:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
 // @route   GET /api/tracking/optimize-route/:routeId
 // @desc    Optimize route for a collector using AI algorithm
 router.get('/optimize-route/:routeId', auth, async (req, res) => {
@@ -318,6 +408,255 @@ router.get('/heatmap', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error'
+    });
+  }
+});
+
+// @route   GET /api/tracking/waste-locations
+// @desc    Get all waste collection locations
+router.get('/waste-locations', auth, async (req, res) => {
+  try {
+    // Get waste collections and grievances
+    const wasteCollections = await WasteCollection.find({
+      status: { $in: ['pending', 'in_progress'] }
+    }).populate('collectorId', 'username');
+
+    const grievances = await Grievance.find({
+      status: { $in: ['Pending', 'In Progress'] }
+    }).populate('citizenId', 'username profile.firstName profile.lastName');
+
+    // Combine and format locations
+    const locations = [
+      ...wasteCollections.map(wc => ({
+        id: wc._id.toString(),
+        area: wc.area,
+        coordinates: wc.location.coordinates,
+        status: wc.status,
+        wasteTypes: wc.wasteTypes,
+        priority: 'medium',
+        estimatedTime: 15,
+        assignedCollector: wc.collectorId?.username,
+        type: 'collection'
+      })),
+      ...grievances.map(g => ({
+        id: g._id.toString(),
+        area: g.location,
+        coordinates: g.coordinates.coordinates,
+        status: g.status.toLowerCase() === 'pending' ? 'pending' : 'in_progress',
+        wasteTypes: [{ type: g.category, amount: 10 }],
+        priority: g.priority <= 2 ? 'high' : g.priority <= 4 ? 'medium' : 'low',
+        estimatedTime: 20,
+        assignedCollector: g.assignedCollector,
+        type: 'grievance',
+        citizen: g.citizenId
+      }))
+    ];
+
+    res.json({
+      success: true,
+      data: locations
+    });
+  } catch (error) {
+    console.error('Error fetching waste locations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch waste locations'
+    });
+  }
+});
+
+// @route   POST /api/tracking/collect-waste/:id
+// @desc    Start collecting waste from a location
+router.post('/collect-waste/:id', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const collectorId = req.user.id;
+
+    // Update waste collection status
+    const collection = await WasteCollection.findByIdAndUpdate(
+      id,
+      { 
+        status: 'in_progress',
+        collectorId: collectorId,
+        startedAt: new Date()
+      },
+      { new: true }
+    ).populate('collectorId', 'username');
+
+    if (!collection) {
+      return res.status(404).json({
+        success: false,
+        message: 'Waste collection not found'
+      });
+    }
+
+    // Emit real-time update
+    req.io.emit('collection-status-update', {
+      id: collection._id,
+      status: 'in_progress',
+      collectorId: collectorId
+    });
+
+    res.json({
+      success: true,
+      data: collection,
+      message: 'Waste collection started'
+    });
+  } catch (error) {
+    console.error('Error collecting waste:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to start waste collection'
+    });
+  }
+});
+
+// @route   POST /api/tracking/complete-waste/:id
+// @desc    Complete waste collection from a location
+router.post('/complete-waste/:id', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const collectorId = req.user.id;
+
+    // Update waste collection status
+    const collection = await WasteCollection.findByIdAndUpdate(
+      id,
+      { 
+        status: 'completed',
+        completedAt: new Date()
+      },
+      { new: true }
+    );
+
+    if (!collection) {
+      return res.status(404).json({
+        success: false,
+        message: 'Waste collection not found'
+      });
+    }
+
+    // Update collector's reward points
+    await User.findByIdAndUpdate(collectorId, {
+      $inc: { rewardPoints: collection.rewardPoints || 20 }
+    });
+
+    // Emit real-time update
+    req.io.emit('collection-status-update', {
+      id: collection._id,
+      status: 'completed',
+      collectorId: collectorId
+    });
+
+    res.json({
+      success: true,
+      data: collection,
+      message: 'Waste collection completed'
+    });
+  } catch (error) {
+    console.error('Error completing waste:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to complete waste collection'
+    });
+  }
+});
+
+// @route   POST /api/tracking/update-location
+// @desc    Update collector's current location (for real-time tracking)
+router.post('/update-location', auth, async (req, res) => {
+  try {
+    const { latitude, longitude, status } = req.body;
+    const collectorId = req.user.id;
+
+    // Update user location
+    await User.findByIdAndUpdate(collectorId, {
+      location: {
+        type: 'Point',
+        coordinates: [longitude, latitude]
+      }
+    });
+
+    // Emit real-time location update
+    const user = await User.findById(collectorId).select('username role assignedRoute');
+    const route = await Route.findById(user.assignedRoute).select('routeCode name');
+    
+    req.io.emit('collector-location-update', {
+      id: collectorId,
+      username: user.username,
+      latitude,
+      longitude,
+      status: status || 'active',
+      currentRoute: route?.routeCode || null
+    });
+
+    res.json({
+      success: true,
+      message: 'Location updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating location:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update location'
+    });
+  }
+});
+
+// @route   GET /api/tracking/collectors
+// @desc    Get all collectors with their locations and stats
+router.get('/collectors', auth, async (req, res) => {
+  try {
+    // Get all collectors
+    const collectors = await User.find({ role: 'collector' })
+      .select('username profile.firstName profile.lastName location assignedRoute')
+      .populate('assignedRoute', 'routeCode name status');
+
+    // Get collection stats for each collector
+    const collectorsWithStats = await Promise.all(
+      collectors.map(async (collector) => {
+        const completedCount = await WasteCollection.countDocuments({
+          collectorId: collector._id,
+          status: 'completed'
+        });
+        
+        const pendingCount = await WasteCollection.countDocuments({
+          collectorId: collector._id,
+          status: 'pending'
+        });
+
+        const inProgressCount = await WasteCollection.countDocuments({
+          collectorId: collector._id,
+          status: 'in_progress'
+        });
+
+        return {
+          id: collector._id,
+          username: collector.username,
+          status: inProgressCount > 0 ? 'in_progress' : pendingCount > 0 ? 'active' : 'idle',
+          currentLocation: collector.location ? {
+            latitude: collector.location.coordinates[1],
+            longitude: collector.location.coordinates[0]
+          } : undefined,
+          currentRoute: collector.assignedRoute?.routeCode || null,
+          completedCollections: completedCount,
+          totalCollections: completedCount + pendingCount + inProgressCount,
+          estimatedTimeRemaining: pendingCount * 15 // Estimate 15 mins per collection
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      data: {
+        collectors: collectorsWithStats,
+        total: collectorsWithStats.length
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching collectors:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch collectors'
     });
   }
 });
