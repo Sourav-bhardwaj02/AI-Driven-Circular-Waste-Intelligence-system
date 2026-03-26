@@ -411,7 +411,7 @@ const LiveMap = ({ collectorMode = false }: { collectorMode?: boolean }) => {
     }
   };
 
-  const updateRouteDisplay = (route: OptimizedRoute) => {
+  const updateRouteDisplay = async (route: OptimizedRoute) => {
     if (!mapInstance.current) return;
 
     // Clear existing route line
@@ -420,20 +420,50 @@ const LiveMap = ({ collectorMode = false }: { collectorMode?: boolean }) => {
       routeLine.current = null;
     }
 
-    // Draw optimized route
-    if (route.waypoints.length > 0) {
-      const coordinates = route.waypoints.map(wp => [wp.coordinates[1], wp.coordinates[0]] as [number, number]);
-      
+    if (!route.waypoints || route.waypoints.length < 2) return;
+
+    const coords = route.waypoints
+      .map((wp) => `${wp.coordinates[0]},${wp.coordinates[1]}`)
+      .join(';');
+
+    try {
+      const res = await fetch(
+        `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`
+      );
+
+      if (!res.ok) {
+        throw new Error(`OSRM request failed with status ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      if (data.routes && data.routes.length > 0 && data.routes[0]?.geometry?.coordinates) {
+        const routeGeo = data.routes[0].geometry;
+        const leafletCoords = routeGeo.coordinates.map(
+          (c: [number, number]) => [c[1], c[0]] as [number, number]
+        );
+
+        routeLine.current = L.polyline(leafletCoords, {
+          color: '#10b981',
+          weight: 5,
+          opacity: 0.9
+        }).addTo(mapInstance.current);
+
+        mapInstance.current.fitBounds(routeLine.current.getBounds(), { padding: [50, 50] });
+      }
+    } catch (err) {
+      console.error("Routing error:", err);
+
+      // Fallback to direct polyline if OSRM is unavailable.
+      const coordinates = route.waypoints.map(
+        (wp) => [wp.coordinates[1], wp.coordinates[0]] as [number, number]
+      );
       routeLine.current = L.polyline(coordinates, {
         color: '#10b981',
-        weight: 4,
-        opacity: 0.7,
-        dashArray: '10, 10'
+        weight: 5,
+        opacity: 0.9
       }).addTo(mapInstance.current);
-
-      // Fit map to show entire route
-      const bounds = L.latLngBounds(coordinates);
-      mapInstance.current.fitBounds(bounds, { padding: [50, 50] });
+      mapInstance.current.fitBounds(routeLine.current.getBounds(), { padding: [50, 50] });
     }
   };
 
@@ -500,175 +530,81 @@ const LiveMap = ({ collectorMode = false }: { collectorMode?: boolean }) => {
   }, []);
 
   return (
-    <div className="live-map-container">
-      {/* Map Header with Info */}
-      <div className="map-header" style={{
-        position: 'absolute',
-        top: '10px',
-        left: '10px',
-        right: '10px',
-        zIndex: 1000,
-        background: 'white',
-        padding: '15px',
-        borderRadius: '8px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '10px'
-      }}>
-        <div>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>🗺️ Live Waste Collection Tracking</h3>
-          <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666' }}>
-            Real-time monitoring of garbage collectors and waste collection points
-          </p>
-        </div>
-        
-        <div style={{ display: 'flex', gap: '15px', alignItems: 'center', fontSize: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <div style={{ width: '12px', height: '12px', background: '#10b981', borderRadius: '50%' }}></div>
-            <span>Active Route</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <div style={{ width: '12px', height: '12px', background: '#3b82f6', borderRadius: '50%' }}></div>
-            <span>Collectors</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <div style={{ width: '12px', height: '12px', background: '#ef4444', borderRadius: '50%' }}></div>
-            <span>Pending</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <div style={{ width: '12px', height: '12px', background: '#22c55e', borderRadius: '50%' }}></div>
-            <span>Completed</span>
-          </div>
-        </div>
+  <div className="relative w-full">
+
+    {/* HEADER */}
+    <div className="absolute top-3 left-3 right-3 z-[1000] bg-white p-4 rounded-xl shadow-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      
+      <div>
+        <h3 className="text-sm font-bold">
+          🗺️ Live Waste Collection Tracking
+        </h3>
+        <p className="text-xs text-gray-500 mt-1">
+          Real-time monitoring of garbage collectors and waste collection points
+        </p>
       </div>
 
-      {/* Login Credentials Panel */}
-      <div className="credentials-panel" style={{
-        position: 'absolute',
-        bottom: '10px',
-        left: '10px',
-        zIndex: 1000,
-        background: 'white',
-        padding: '12px',
-        borderRadius: '8px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-        fontSize: '11px',
-        maxWidth: '250px'
-      }}>
-        <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: 'bold' }}>🔑 Login Credentials</h4>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <div style={{ padding: '4px', background: '#f3f4f6', borderRadius: '4px' }}>
-            <strong>Admin:</strong> admin@wastewise.com / admin123
-          </div>
-          <div style={{ padding: '4px', background: '#f3f4f6', borderRadius: '4px' }}>
-            <strong>Citizen:</strong> citizen@wastewise.com / citizen123
-          </div>
-          <div style={{ padding: '4px', background: '#f3f4f6', borderRadius: '4px' }}>
-            <strong>Collector:</strong> collector@wastewise.com / collector123
-          </div>
+      <div className="flex flex-wrap gap-4 text-xs">
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+          <span>Active Route</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+          <span>Collectors</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+          <span>Pending</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+          <span>Completed</span>
         </div>
       </div>
-
-      {/* Route Info Panel */}
-      {optimizedRoute && (
-        <div className="route-info-panel" style={{
-          position: 'absolute',
-          bottom: '10px',
-          right: '10px',
-          zIndex: 1000,
-          background: 'white',
-          padding: '12px',
-          borderRadius: '8px',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-          fontSize: '12px',
-          maxWidth: '200px'
-        }}>
-          <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: 'bold' }}>🚛 Route Info</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <div><strong>{optimizedRoute.name}</strong></div>
-            <div>⏱️ {optimizedRoute.totalTime} mins</div>
-            <div>📏 {optimizedRoute.totalDistance} km</div>
-            <div>📍 {optimizedRoute.waypoints.length} stops</div>
-          </div>
-        </div>
-      )}
-
-      {/* Map Container */}
-      <div 
-        ref={mapRef} 
-        style={{ 
-          width: '100%', 
-          height: '600px',
-          borderRadius: '8px',
-          overflow: 'hidden'
-        }} 
-      />
-
-      <style>{`
-        .collector-marker {
-          position: relative;
-          width: 40px;
-          height: 40px;
-        }
-        .truck-icon {
-          font-size: 20px;
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          z-index: 2;
-        }
-        .pulse {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: 40px;
-          height: 40px;
-          background: rgba(16, 185, 129, 0.3);
-          border-radius: 50%;
-          animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-          0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; }
-          100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
-        }
-        .waste-marker {
-          position: relative;
-          width: 30px;
-          height: 30px;
-        }
-        .waste-marker.completed {
-          opacity: 0.6;
-        }
-        .waste-icon {
-          font-size: 16px;
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-        }
-        .collector-popup, .waste-popup {
-          font-family: system-ui;
-        }
-        .collect-btn {
-          background: #10b981;
-          color: white;
-          border: none;
-          padding: 4px 8px;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 12px;
-        }
-        .collect-btn:hover {
-          background: #059669;
-        }
-      `}</style>
     </div>
-  );
+
+    {/* LOGIN PANEL */}
+    <div className="absolute bottom-3 left-3 z-[1000] bg-white p-3 rounded-xl shadow-lg text-[11px] max-w-[260px]">
+      <h4 className="font-bold text-xs mb-2">🔑 Login Credentials</h4>
+
+      <div className="flex flex-col gap-1">
+        <div className="bg-gray-100 p-2 rounded">
+          <strong>Admin:</strong> admin@wastewise.com / admin123
+        </div>
+        <div className="bg-gray-100 p-2 rounded">
+          <strong>Citizen:</strong> citizen@wastewise.com / citizen123
+        </div>
+        <div className="bg-gray-100 p-2 rounded">
+          <strong>Collector:</strong> collector@wastewise.com / collector123
+        </div>
+      </div>
+    </div>
+
+    {/* ROUTE PANEL */}
+    {optimizedRoute && (
+      <div className="absolute bottom-3 right-3 z-[1000] bg-white p-3 rounded-xl shadow-lg text-xs max-w-[220px]">
+        <h4 className="font-bold mb-2">🚛 Route Info</h4>
+
+        <div className="flex flex-col gap-1">
+          <div className="font-semibold">
+            {optimizedRoute.name}
+          </div>
+          <div>⏱️ {optimizedRoute.totalTime} mins</div>
+          <div>📏 {optimizedRoute.totalDistance} km</div>
+          <div>📍 {optimizedRoute.waypoints.length} stops</div>
+        </div>
+      </div>
+    )}
+
+    {/* MAP */}
+    <div
+      ref={mapRef}
+      className="w-full h-[600px] rounded-xl overflow-hidden"
+    />
+
+  </div>
+);
 };
 
 export default LiveMap;
