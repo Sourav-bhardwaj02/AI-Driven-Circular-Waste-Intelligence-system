@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtualenvs
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+backend2/venv/
+backend/venv/
+
+# Model files (large, regenerate)
+*.h5
+yolov8n.pt
+waste_model.h5
+
+# Logs
+*.log

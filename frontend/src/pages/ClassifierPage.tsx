@@ -1,85 +1,168 @@
 import { motion } from "framer-motion";
-import { Camera, CheckSquare, Home as HomeIcon, AlertTriangle, Recycle, Upload } from "lucide-react";
-import { useState } from "react";
+import { Camera, Upload } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 
-const wasteTypes = [
-  { type: "Biodegradable", bin: "Green Bin", color: "text-primary", bgColor: "bg-primary", icon: CheckSquare },
-  { type: "Recyclable", bin: "Blue Bin", color: "text-eco-teal", bgColor: "bg-eco-teal", icon: HomeIcon },
-  { type: "Hazardous", bin: "Red Bin", color: "text-eco-rose", bgColor: "bg-eco-rose", icon: AlertTriangle },
-];
+const API_URL = import.meta.env.VITE_API_URL2 || "http://127.0.0.1:8000/api";
+
+const CLASS_BINS = {
+  biodegradable: "Green Bin",
+  recyclable: "Blue Bin",
+  hazardous: "Red Bin",
+  unknown: "Unknown",
+};
 
 const ClassifierPage = () => {
-  const [result, setResult] = useState<typeof wasteTypes[0] | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
+  const [isCameraOn, setIsCameraOn] = useState(false);
+  const [detections, setDetections] = useState([]);
+  const [backendOk, setBackendOk] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleUpload = () => {
-    setAnalyzing(true);
-    setTimeout(() => {
-      setResult(wasteTypes[0]);
-      setAnalyzing(false);
-    }, 2000);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const intervalRef = useRef(null);
+
+  // ✅ Check backend
+  useEffect(() => {
+    axios.get(`${API_URL}/status/`)
+      .then(() => setBackendOk(true))
+      .catch(() => setBackendOk(false));
+  }, []);
+
+  // ✅ Draw boxes
+  const drawBoxes = useCallback((dets) => {
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    if (!canvas || !video) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    dets.forEach((det) => {
+      const { x1, y1, x2, y2 } = det.box;
+
+      ctx.strokeStyle = "#22c55e";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+
+      ctx.fillStyle = "#22c55e";
+      ctx.fillText(`${det.label} ${det.confidence}%`, x1, y1 - 5);
+    });
+  }, []);
+
+  // ✅ Send frame to backend
+  const sendFrame = useCallback(async () => {
+    if (!videoRef.current || isProcessing || !backendOk) return;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(videoRef.current, 0, 0);
+
+    const frame = canvas.toDataURL("image/jpeg", 0.7);
+
+    setIsProcessing(true);
+
+    try {
+      const res = await axios.post(`${API_URL}/classify/`, { frame });
+
+      if (res.data.success) {
+        setDetections(res.data.detections);
+        drawBoxes(res.data.detections);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    setIsProcessing(false);
+  }, [backendOk, isProcessing, drawBoxes]);
+
+  // ✅ Toggle camera
+  const toggleCamera = async () => {
+    if (isCameraOn) {
+      clearInterval(intervalRef.current);
+      streamRef.current?.getTracks().forEach(t => t.stop());
+      setIsCameraOn(false);
+      setDetections([]);
+    } else {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+
+      setIsCameraOn(true);
+
+      setTimeout(() => {
+        videoRef.current.srcObject = stream;
+        streamRef.current = stream;
+        intervalRef.current = setInterval(sendFrame, 1500);
+      }, 200);
+    }
   };
+
+  useEffect(() => {
+    drawBoxes(detections);
+  }, [detections, drawBoxes]);
 
   return (
     <div className="min-h-screen pt-24 pb-16 px-6">
       <div className="max-w-3xl mx-auto">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <Link to="/" className="text-sm text-primary hover:underline mb-6 inline-block">← Back to Home</Link>
-          <h1 className="text-3xl font-bold text-foreground text-center mb-2">AI Waste Classifier</h1>
-          <p className="text-center text-muted-foreground mb-10">Upload a photo of your waste and our AI will classify it instantly</p>
 
-          <div className="glass-card-static p-8">
-            {!result && !analyzing && (
-              <div onClick={handleUpload} className="border-2 border-dashed border-border rounded-2xl p-12 text-center cursor-pointer hover:border-primary/40 transition-all group">
-                <div className="w-16 h-16 rounded-2xl bg-accent mx-auto mb-4 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Camera className="w-8 h-8 text-primary" />
-                </div>
-                <p className="text-lg font-medium text-foreground mb-1">Click to Upload Image</p>
-                <p className="text-sm text-muted-foreground">or drag and drop your waste image here</p>
+        <Link to="/" className="text-sm text-primary mb-6 inline-block">
+          ← Back to Home
+        </Link>
+
+        <h1 className="text-3xl font-bold text-center mb-2">
+          AI Waste Classifier
+        </h1>
+
+        <p className="text-center mb-6">
+          {backendOk ? "✅ Backend Connected" : "❌ Backend Offline"}
+        </p>
+
+        <div className="glass-card-static p-6">
+
+          {/* CAMERA */}
+          <div className="relative rounded-xl overflow-hidden bg-black">
+            {isCameraOn ? (
+              <>
+                <video ref={videoRef} autoPlay className="w-full" />
+                <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full" />
+              </>
+            ) : (
+              <div className="text-center p-20 text-gray-400">
+                Camera Off
               </div>
-            )}
-
-            {analyzing && (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin mx-auto mb-4" />
-                <p className="text-foreground font-medium">Analyzing waste...</p>
-                <p className="text-sm text-muted-foreground">Our AI is classifying your image</p>
-              </div>
-            )}
-
-            {result && (
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-                <div className="flex flex-col md:flex-row items-center gap-8 mb-6">
-                  <div className="w-48 h-48 rounded-2xl bg-accent flex items-center justify-center">
-                    <Recycle className="w-20 h-20 text-primary/30" />
-                  </div>
-                  <div>
-                    <h2 className={`text-3xl font-bold ${result.color} mb-2`}>{result.type} Waste</h2>
-                    <button className={`${result.bgColor} text-primary-foreground px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2`}>
-                      <result.icon className="w-5 h-5" /> Use {result.bin}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  {wasteTypes.map(w => (
-                    <div key={w.type} className={`glass-card p-4 text-center ${result.type === w.type ? "ring-2 ring-primary" : ""}`}>
-                      <h3 className={`text-sm font-semibold ${w.color} mb-2`}>{w.type} Waste</h3>
-                      <button className={`${w.bgColor} text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 mx-auto`}>
-                        <w.icon className="w-3 h-3" /> Use {w.bin}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                <button onClick={() => setResult(null)} className="btn-eco-outline w-full mt-6 flex items-center justify-center gap-2">
-                  <Upload className="w-4 h-4" /> Classify Another
-                </button>
-              </motion.div>
             )}
           </div>
-        </motion.div>
+
+          {/* BUTTON */}
+          <button
+            onClick={toggleCamera}
+            className="btn-eco-outline w-full mt-4 flex items-center justify-center gap-2"
+          >
+            <Camera className="w-4 h-4" />
+            {isCameraOn ? "Stop Camera" : "Start Camera"}
+          </button>
+
+          {/* DETECTIONS */}
+          {detections.length > 0 && (
+            <div className="mt-6 space-y-3">
+              {detections.map((det, i) => (
+                <div key={i} className="glass-card p-4 flex justify-between">
+                  <span className="font-semibold">{det.label}</span>
+                  <span>{CLASS_BINS[det.label]}</span>
+                  <span>{det.confidence}%</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+        </div>
       </div>
     </div>
   );
