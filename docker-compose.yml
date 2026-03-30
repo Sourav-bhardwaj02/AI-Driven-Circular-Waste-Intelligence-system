@@ -32,11 +32,22 @@ services:
     environment:
       - NODE_ENV=production
     depends_on:
+      - backend2
       - backend
     restart: always
     networks:
       - wisenet
-
+  backend2:
+    image: shivamdevthakur/wastewise-backend2:latest
+    build:
+      context: ./backend2
+      dockerfile: Dockerfile
+    container_name: wastewise-backend2
+    networks:
+      - wisenet
+    ports:
+      - "8000:8000"
+    # restart: always
 networks:
   wisenet:
     driver: bridge
