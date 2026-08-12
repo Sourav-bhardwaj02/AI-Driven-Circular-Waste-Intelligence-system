@@ -77,10 +77,9 @@ const optimizeRoute = (startPoint, locations, maxDistance = 50) => {
 router.get('/collectors', async (req, res) => {
   try {
     const collectors = await User.find({ 
-      role: 'collector',
-      isActive: true 
+      role: 'collector'
     })
-    .select('username email currentLocation vehicleNumber profile.phone status lastLocationUpdate profile.firstName profile.lastName');
+    .select('username email location currentLocation vehicleNumber profile.phone status lastLocationUpdate profile.firstName profile.lastName');
 
     // Format collector data for frontend
     const formattedCollectors = collectors.map(collector => ({
@@ -90,8 +89,8 @@ router.get('/collectors', async (req, res) => {
         ? `${collector.profile.firstName} ${collector.profile.lastName}` 
         : collector.username,
       email: collector.email,
-      latitude: collector.currentLocation?.coordinates?.[1] || 28.6139,
-      longitude: collector.currentLocation?.coordinates?.[0] || 77.2090,
+      latitude: collector.currentLocation?.coordinates?.[1] || collector.location?.coordinates?.[1] || 28.6139,
+      longitude: collector.currentLocation?.coordinates?.[0] || collector.location?.coordinates?.[0] || 77.2090,
       status: collector.status || 'active',
       currentRoute: null,
       vehicleNumber: collector.vehicleNumber,
@@ -424,16 +423,16 @@ router.get('/optimize-route/:routeId', auth, async (req, res) => {
     ];
     
     // Sort by priority first (complaints with high priority)
-    allPoints.sort((a, b) => {
+    locations.sort((a, b) => {
       if (a.type === 'complaint' && b.type !== 'complaint') return -1;
       if (a.type !== 'complaint' && b.type === 'complaint') return 1;
-      if (a.priority === 'high' && b.priority !== 'high') return -1;
-      if (a.priority !== 'high' && b.priority === 'high') return 1;
+      if (a.priority === 3 && b.priority !== 3) return -1;
+      if (a.priority !== 3 && b.priority === 3) return 1;
       return 0;
     });
     
     // Optimize the route
-    const optimizedPoints = optimizeRoute(allPoints);
+    const optimizedPoints = optimizeRoute([77.2090, 28.6139], locations);
     
     // Update route with optimized checkpoints
     route.optimizedCheckpoints = optimizedPoints;

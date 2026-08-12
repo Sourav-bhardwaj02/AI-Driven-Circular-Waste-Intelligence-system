@@ -16,8 +16,12 @@ const server = http.createServer(app);
 // Initialize Socket.IO
 const io = initSocket(server);
 
-// Connect to database
-connectDB();
+const seedUsers = require('./scripts/seed');
+
+// Connect to database and seed demo users
+connectDB().then((conn) => {
+  if (conn) seedUsers();
+}).catch(err => console.error('DB seed error:', err));
 
 // Middleware
 app.use(cors());
@@ -43,6 +47,7 @@ app.use('/api/community', require('./routes/community'));
 app.use('/api/leaderboard', require('./routes/leaderboard'));
 app.use('/api/grievance', require('./routes/grievance'));
 app.use('/api/profile', require('./routes/profile'));
+app.use('/api/routing', require('./routes/routing'));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -86,6 +91,7 @@ server.listen(PORT, () => {
   console.log(`📍 Tracking API: http://localhost:${PORT}/api/tracking`);
   console.log(`👨‍👩‍👧‍👦 Community API: http://localhost:${PORT}/api/community`);
   console.log(`🔌 Socket.IO enabled for real-time updates`);
+  console.log(`🗺️  Routing Proxy: http://localhost:${PORT}/api/routing/route`);
 });
 
 module.exports = app;

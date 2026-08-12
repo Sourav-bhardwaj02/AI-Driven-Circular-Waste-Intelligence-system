@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+https://github.com/Sourav-bhardwaj02/AI-Driven-Circular-Waste-Intelligence-system.gitimport { Link } from "react-router-dom";
 import Footer from "@/components/Footer";
 
 const AboutPage = () => (

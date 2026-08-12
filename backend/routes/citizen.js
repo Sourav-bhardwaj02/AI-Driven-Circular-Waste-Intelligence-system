@@ -144,9 +144,16 @@ router.get('/rewards/:userId', async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(50);
 
-    res.json(transactions);
+    const user = await User.findById(req.params.userId).select('rewardPoints level username');
+
+    res.json({
+      success: true,
+      rewardPoints: user ? user.rewardPoints : 0,
+      level: user ? user.level : 1,
+      transactions
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
@@ -155,28 +162,113 @@ router.post('/redeem', async (req, res) => {
   try {
     const { userId, category, amount, description } = req.body;
 
-    const user = await User.findById(userId);
-    if (!user || user.rewardPoints < amount) {
-      return res.status(400).json({ message: 'Insufficient points' });
+    if (!userId || !amount || amount <= 0) {
+      return res.status(400).json({ success: false, message: 'Invalid redemption parameters' });
     }
 
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.rewardPoints < amount) {
+      return res.status(400).json({ success: false, message: `Insufficient points balance. You need ${amount} points.` });
+    }
+
+    // Generate random voucher code (e.g., WW-WATER-8X92K)
+    const categoryCode = (category || 'ECO').toUpperCase().substring(0, 5);
+    const randomHex = Math.random().toString(36).substring(2, 7).toUpperCase();
+    const voucherCode = `WW-${categoryCode}-${randomHex}`;
+
     // Create redemption transaction
-    await RewardTransaction.create({
+    const transaction = await RewardTransaction.create({
       userId,
       type: 'redeemed',
       amount,
-      description,
-      category
+      description: `${description || 'Reward Voucher'} (Code: ${voucherCode})`,
+      category: category || 'bill_payment'
     });
 
     // Update user points
-    await User.findByIdAndUpdate(userId, {
-      $inc: { rewardPoints: -amount }
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $inc: { rewardPoints: -amount } },
+      { new: true }
+    );
+
+    res.json({
+      success: true,
+      message: 'Reward redeemed successfully!',
+      voucherCode,
+      newBalance: updatedUser.rewardPoints,
+      transaction
+    });
+  } catch (error) {
+    console.error('Redeem error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Claim Daily Eco Bonus (+25 points)
+router.post('/daily-claim', async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Check if user already claimed today
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const existingClaim = await RewardTransaction.findOne({
+      userId,
+      category: 'daily_pickup',
+      createdAt: { $gte: startOfToday }
     });
 
-    res.json({ message: 'Reward redeemed successfully' });
+    if (existingClaim) {
+      return res.status(400).json({
+        success: false,
+        message: 'Daily eco bonus already claimed today! Check back tomorrow.'
+      });
+    }
+
+    // Create reward transaction
+    const bonusAmount = 25;
+    const transaction = await RewardTransaction.create({
+      userId,
+      type: 'earned',
+      amount: bonusAmount,
+      description: 'Daily Eco Check-in Bonus',
+      category: 'daily_pickup'
+    });
+
+    // Update user points and check level up
+    const newPoints = user.rewardPoints + bonusAmount;
+    const newLevel = Math.max(user.level, Math.floor(newPoints / 500) + 1);
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        $inc: { rewardPoints: bonusAmount },
+        level: newLevel
+      },
+      { new: true }
+    );
+
+    res.json({
+      success: true,
+      message: `🎉 Success! You earned +${bonusAmount} Eco Points for your daily check-in.`,
+      newBalance: updatedUser.rewardPoints,
+      level: updatedUser.level,
+      transaction
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Daily claim error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 

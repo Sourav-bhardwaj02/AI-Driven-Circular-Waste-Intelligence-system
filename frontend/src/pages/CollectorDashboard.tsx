@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Home, MapPin, ClipboardList, Clock, Navigation, Truck, CheckCircle, Circle, Star, Search, Bell } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import mapImage from "@/assets/map-placeholder.png";
+import LiveMap from "@/components/LiveMap";
 import { getCollectorDashboard, updateRouteStatus } from "@/api/dashboard";
 import { useAuth } from "@/context/AuthContext";
 
@@ -154,7 +154,7 @@ const CollectorDashboard = () => {
                 </div>
               )}
               <div className="rounded-xl overflow-hidden mb-3">
-                <img src={mapImage} alt="Route map" className="w-full h-56 object-cover rounded-xl" />
+                <LiveMap collectorMode={true} />
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -163,31 +163,26 @@ const CollectorDashboard = () => {
                   ) : (
                     <span className="status-amber">Route Pending</span>
                   )}
-                  <span className="text-xs text-muted-foreground">AI Optimized</span>
+                  <span className="text-xs text-muted-foreground">OSRM Road Navigation</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Star className="w-4 h-4 text-eco-amber" />
                   <span className="text-sm font-semibold text-foreground">{dashboardData.rewardPoints}</span>
                 </div>
-              </div>
-            </div>
-
-            {/* Map + Tasks */}
-            <div className="lg:col-span-2 space-y-5">
-              <div className="glass-card-static p-5">
-                <div className="rounded-xl overflow-hidden mb-3">
-                  <img src={mapImage} alt="Navigation" className="w-full h-36 object-cover rounded-xl" />
-                </div>
                 <button 
                   onClick={handleRouteToggle}
                   disabled={!dashboardData.currentRoute}
-                  className={`w-full text-center py-3 rounded-xl font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`px-4 py-2 rounded-xl font-semibold text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                     routeStarted ? "bg-eco-rose/10 text-eco-rose border border-eco-rose/30" : "btn-eco"
                   }`}
                 >
                   {routeStarted ? "Stop Route" : "Start Route"}
                 </button>
               </div>
+            </div>
+
+            {/* Tasks */}
+            <div className="lg:col-span-2 space-y-5">
 
               <div className="glass-card-static p-5">
                 <div className="flex items-center justify-between mb-3">

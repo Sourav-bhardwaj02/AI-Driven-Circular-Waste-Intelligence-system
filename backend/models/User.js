@@ -24,7 +24,9 @@ const userSchema = new mongoose.Schema({
     firstName: String,
     lastName: String,
     phone: String,
-    address: String
+    address: String,
+    society: String,     // e.g. 'Green Park RWA', 'Sector 11 Society'
+    zone: String         // e.g. 'South Delhi', 'North Delhi'
   },
   rewardPoints: {
     type: Number,
