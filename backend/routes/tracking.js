@@ -757,4 +757,122 @@ router.get('/collectors', auth, async (req, res) => {
   }
 });
 
+// @route   GET /api/tracking/citizen-live
+// @desc    Get privacy-preserving live tracking data for a citizen (Zomato-style)
+router.get('/citizen-live', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId).select('username profile location email');
+
+    // Citizen's registered destination location (defaults to Delhi Green Park if not set)
+    const citizenLat = user?.location?.coordinates?.[1] || 28.5835;
+    const citizenLng = user?.location?.coordinates?.[0] || 77.2250;
+    const citizenAddress = user?.profile?.address || "House #42, Sector 5, Green Park, New Delhi";
+
+    // Find assigned or active collector
+    let collector = await User.findOne({ role: 'collector', status: { $ne: 'offline' } })
+      .select('username profile currentLocation location vehicleNumber status lastLocationUpdate');
+
+    if (!collector) {
+      collector = await User.findOne({ role: 'collector' })
+        .select('username profile currentLocation location vehicleNumber status lastLocationUpdate');
+    }
+
+    const collectorLat = collector?.currentLocation?.coordinates?.[1] || collector?.location?.coordinates?.[1] || 28.6080;
+    const collectorLng = collector?.currentLocation?.coordinates?.[0] || collector?.location?.coordinates?.[0] || 77.2120;
+
+    const collectorName = collector?.profile?.firstName && collector?.profile?.lastName
+      ? `${collector.profile.firstName} ${collector.profile.lastName}`
+      : collector?.username || "Ramesh Kumar";
+
+    // Distance calculation for geofenced status
+    const distanceKm = calculateDistance(collectorLat, collectorLng, citizenLat, citizenLng);
+    const distanceMeters = distanceKm * 1000;
+
+    let pickupStatus = 'on_the_way';
+    if (distanceMeters <= 50) {
+      pickupStatus = 'arrived';
+    } else if (distanceMeters <= 300) {
+      pickupStatus = 'approaching';
+    }
+
+    // PRIVACY-PRESERVING PAYLOAD: Contains ONLY collector info and citizen's destination.
+    // Explicitly NO other household locations or stop-by-stop route stops!
+    res.json({
+      success: true,
+      data: {
+        citizenLocation: {
+          latitude: citizenLat,
+          longitude: citizenLng,
+          address: citizenAddress,
+          label: "Your Household Location"
+        },
+        assignedCollector: {
+          id: collector?._id || "demo_collector_1",
+          name: collectorName,
+          username: collector?.username || "ramesh_collector",
+          vehicleNumber: collector?.vehicleNumber || "DL-01-WB-4821 (Municipal EV Truck)",
+          phone: collector?.profile?.phone || "+91 98765 43210",
+          rating: 4.9,
+          status: collector?.status || "active",
+          latitude: collectorLat,
+          longitude: collectorLng,
+          lastLocationUpdate: collector?.lastLocationUpdate || new Date()
+        },
+        pickupStatus,
+        geofenceConfig: {
+          approachingMeters: 300,
+          arrivedMeters: 50
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching citizen live tracking:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch live tracking details'
+    });
+  }
+});
+
+// @route   POST /api/tracking/update-pickup-status
+// @desc    Update citizen pickup collection status
+router.post('/update-pickup-status', auth, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const userId = req.user.id;
+
+    if (!['on_the_way', 'approaching', 'arrived', 'collected'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status'
+      });
+    }
+
+    // Emit socket event to notify client
+    const { getIO } = require('../socket');
+    const io = getIO();
+    if (io) {
+      io.emit('citizen-pickup-status-update', {
+        userId,
+        status,
+        updatedAt: new Date()
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Pickup status updated to ${status}`,
+      status
+    });
+  } catch (error) {
+    console.error('Error updating pickup status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error updating pickup status'
+    });
+  }
+});
+
 module.exports = router;
+

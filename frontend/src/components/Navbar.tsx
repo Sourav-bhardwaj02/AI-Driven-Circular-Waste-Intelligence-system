@@ -68,9 +68,11 @@ const Navbar = ({ isLoggedIn, userRole, onLoginClick, onLogout }: NavbarProps) =
                     <Link to="/profile" className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-accent rounded-lg transition-colors" onClick={() => setProfileOpen(false)}>
                       <User className="w-4 h-4" /> My Profile
                     </Link>
-                    <Link to={getDashboardLink()} className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-accent rounded-lg transition-colors" onClick={() => setProfileOpen(false)}>
-                      <Settings className="w-4 h-4" /> Dashboard
-                    </Link>
+                    {userRole !== "citizen" && (
+                      <Link to={getDashboardLink()} className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-accent rounded-lg transition-colors" onClick={() => setProfileOpen(false)}>
+                        <Settings className="w-4 h-4" /> Dashboard
+                      </Link>
+                    )}
                     <Link to="/leaderboard" className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-accent rounded-lg transition-colors" onClick={() => setProfileOpen(false)}>
                       <Trophy className="w-4 h-4" /> Leaderboard
                     </Link>

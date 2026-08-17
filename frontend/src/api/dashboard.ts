@@ -43,7 +43,9 @@ export interface CitizenDashboardData {
 }
 
 export interface CollectorDashboardData {
+  collectorStatus?: string;
   currentRoute: {
+    id?: string;
     routeCode: string;
     name: string;
     areas: string;
@@ -53,6 +55,7 @@ export interface CollectorDashboardData {
     aiOptimized: boolean;
   } | null;
   pickups: Array<{
+    id?: string;
     name: string;
     time: string;
     status: string;
@@ -185,6 +188,18 @@ export const updateRouteStatus = async (routeId: string, status: string) => {
   } catch (error) {
     console.error('Error updating route status:', error);
     throw new Error('Failed to update route status');
+  }
+};
+
+export const updateCollectorDutyStatus = async (userId: string, status: string) => {
+  try {
+    return await apiCall(`${API_BASE_URL}/collector/status/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  } catch (error) {
+    console.error('Error updating collector duty status:', error);
+    throw new Error('Failed to update duty status');
   }
 };
 

@@ -35,7 +35,7 @@ const AppContent = () => {
     if (user) {
       if (user.role === "admin") navigate("/dashboard/admin");
       else if (user.role === "collector") navigate("/dashboard/collector");
-      else navigate("/dashboard/citizen");
+      else navigate("/tracking");
     }
   };
 

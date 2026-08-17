@@ -3,6 +3,7 @@ import { getRouteFromOSRM, OSRMRouteResult } from './osrmRouting';
 export interface RouteStop {
   id: string;
   name: string;
+  houseNumber?: string;
   coordinates: [number, number]; // [lng, lat]
   status: 'pending' | 'in_progress' | 'completed';
   type: 'depot' | 'collection' | 'plant';
@@ -37,51 +38,97 @@ export const DELHI_PLANT: RouteStop = {
   type: 'plant'
 };
 
+// Household collection series along Delhi municipal route
 export const DEMO_COLLECTION_STOPS: RouteStop[] = [
   {
-    id: 'stop-cp-market',
-    name: 'Connaught Place Market Complex',
+    id: 'house-101',
+    name: 'Connaught Place - House #101',
+    houseNumber: '#101',
     coordinates: [77.2195, 28.6315],
     status: 'pending',
     type: 'collection',
-    estimatedTime: 15,
-    wasteAmountKg: 85
+    estimatedTime: 5,
+    wasteAmountKg: 15
   },
   {
-    id: 'stop-lajpat-nagar',
-    name: 'Lajpat Nagar Central Market',
+    id: 'house-102',
+    name: 'Connaught Place - House #102',
+    houseNumber: '#102',
+    coordinates: [77.2215, 28.6280],
+    status: 'pending',
+    type: 'collection',
+    estimatedTime: 5,
+    wasteAmountKg: 12
+  },
+  {
+    id: 'house-201',
+    name: 'Lajpat Nagar - House #42 (Block B)',
+    houseNumber: '#42',
     coordinates: [77.2432, 28.5677],
     status: 'pending',
     type: 'collection',
-    estimatedTime: 20,
-    wasteAmountKg: 120
+    estimatedTime: 8,
+    wasteAmountKg: 25
   },
   {
-    id: 'stop-south-ext',
-    name: 'South Extension Residential Zone',
+    id: 'house-202',
+    name: 'Lajpat Nagar - House #45 (Block B)',
+    houseNumber: '#45',
+    coordinates: [77.2410, 28.5650],
+    status: 'pending',
+    type: 'collection',
+    estimatedTime: 6,
+    wasteAmountKg: 18
+  },
+  {
+    id: 'house-301',
+    name: 'South Ext - House #88',
+    houseNumber: '#88',
     coordinates: [77.2217, 28.5693],
     status: 'pending',
     type: 'collection',
-    estimatedTime: 12,
-    wasteAmountKg: 65
+    estimatedTime: 7,
+    wasteAmountKg: 20
   },
   {
-    id: 'stop-green-park',
-    name: 'Green Park Main Colony',
+    id: 'house-302',
+    name: 'South Ext - House #92',
+    houseNumber: '#92',
+    coordinates: [77.2180, 28.5640],
+    status: 'pending',
+    type: 'collection',
+    estimatedTime: 6,
+    wasteAmountKg: 14
+  },
+  {
+    id: 'house-401',
+    name: 'Green Park - House #12 (Sector 5)',
+    houseNumber: '#12',
     coordinates: [77.2065, 28.5588],
     status: 'pending',
     type: 'collection',
-    estimatedTime: 18,
-    wasteAmountKg: 95
+    estimatedTime: 8,
+    wasteAmountKg: 30
   },
   {
-    id: 'stop-hauz-khas',
-    name: 'Hauz Khas Village Commercial Hub',
+    id: 'house-402',
+    name: 'Green Park - House #15 (Sector 5)',
+    houseNumber: '#15',
+    coordinates: [77.2040, 28.5540],
+    status: 'pending',
+    type: 'collection',
+    estimatedTime: 7,
+    wasteAmountKg: 22
+  },
+  {
+    id: 'house-501',
+    name: 'Hauz Khas - House #105 (Village)',
+    houseNumber: '#105',
     coordinates: [77.2023, 28.5494],
     status: 'pending',
     type: 'collection',
-    estimatedTime: 15,
-    wasteAmountKg: 70
+    estimatedTime: 10,
+    wasteAmountKg: 35
   }
 ];
 

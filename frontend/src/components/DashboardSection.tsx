@@ -21,10 +21,10 @@ const dashboards = [
   },
   {
     icon: Users,
-    title: "Citizen Dashboard",
-    desc: "Report garbage with photo & GPS, track nearby trucks, earn reward points, and redeem cashback for bills.",
-    btn: "Open App",
-    link: "/dashboard/citizen",
+    title: "Citizen Live Tracking",
+    desc: "Track your assigned municipal garbage collector truck in real time with dynamic ETA and privacy protection.",
+    btn: "Track My Collector",
+    link: "/tracking",
     color: "from-eco-purple to-primary",
   },
 ];

@@ -322,8 +322,12 @@ const CitizenDashboard = () => {
                 )}
               </div>
               <div className="flex gap-3 mt-3">
-                <button className="btn-eco flex-1 text-center">Track Truck</button>
-                <button className="btn-eco-outline flex-1 text-center">View Schedule</button>
+                <Link to="/tracking" className="btn-eco flex-1 text-center font-bold flex items-center justify-center">
+                  Track My Collector
+                </Link>
+                <Link to="/tracking" className="btn-eco-outline flex-1 text-center flex items-center justify-center">
+                  View Live Map
+                </Link>
               </div>
             </div>
           </div>

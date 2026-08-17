@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const WasteCollection = require('../models/WasteCollection');
 const User = require('../models/User');
 const Route = require('../models/Route');
@@ -32,6 +33,7 @@ router.get('/dashboard/:userId', async (req, res) => {
     }).sort({ createdAt: -1 });
 
     const pickups = todayCollections.map(collection => ({
+      id: collection._id,
       name: `${collection.area} - ${collection.route}`,
       time: getTimeAgo(collection.createdAt),
       status: collection.status === 'completed' ? 'Completed' : 
@@ -54,7 +56,9 @@ router.get('/dashboard/:userId', async (req, res) => {
     }));
 
     res.json({
+      collectorStatus: collector.status || 'active',
       currentRoute: currentRoute ? {
+        id: currentRoute._id,
         routeCode: currentRoute.routeCode,
         name: currentRoute.name,
         areas: currentRoute.areas.map(area => area.name).join(' · '),
@@ -65,7 +69,7 @@ router.get('/dashboard/:userId', async (req, res) => {
       } : null,
       pickups,
       areas,
-      rewardPoints: collector.rewardPoints,
+      rewardPoints: collector.rewardPoints || 0,
       routeStarted: currentRoute?.status === 'in_progress' || false
     });
   } catch (error) {
@@ -74,11 +78,66 @@ router.get('/dashboard/:userId', async (req, res) => {
   }
 });
 
-// Start/Stop route
+// Update collector duty status (active, busy, idle, offline)
+router.put('/status/:userId', async (req, res) => {
+  try {
+    const { status } = req.body;
+    const { userId } = req.params;
+
+    if (!['active', 'busy', 'idle', 'offline', 'in_progress'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status' });
+    }
+
+    const collector = await User.findByIdAndUpdate(
+      userId,
+      { status },
+      { new: true }
+    );
+
+    if (!collector) {
+      return res.status(404).json({ message: 'Collector not found' });
+    }
+
+    // Emit real-time socket update
+    try {
+      const { getIO } = require('../socket');
+      const io = getIO();
+      if (io) {
+        io.emit('collector-status-update', {
+          id: collector._id,
+          username: collector.username,
+          status: collector.status,
+          updatedAt: new Date()
+        });
+      }
+    } catch (sErr) {
+      console.warn("Socket notification warning:", sErr.message);
+    }
+
+    res.json({
+      success: true,
+      message: 'Status updated successfully',
+      status: collector.status
+    });
+  } catch (error) {
+    console.error('Error updating collector status:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Start/Stop route (handles both MongoDB ObjectId and routeCode)
 router.put('/route/:routeId/status', async (req, res) => {
   try {
     const { status } = req.body;
-    const route = await Route.findById(req.params.routeId);
+    const routeIdParam = req.params.routeId;
+
+    let route;
+    if (mongoose.Types.ObjectId.isValid(routeIdParam)) {
+      route = await Route.findById(routeIdParam);
+    }
+    if (!route) {
+      route = await Route.findOne({ routeCode: routeIdParam });
+    }
 
     if (!route) {
       return res.status(404).json({ message: 'Route not found' });
@@ -92,13 +151,19 @@ router.put('/route/:routeId/status', async (req, res) => {
     }
 
     const updatedRoute = await Route.findByIdAndUpdate(
-      req.params.routeId,
+      route._id,
       updateData,
       { new: true }
     );
 
+    // Also update collector status
+    if (route.collectorId) {
+      const userStatus = status === 'in_progress' ? 'active' : status === 'completed' ? 'idle' : 'assigned';
+      await User.findByIdAndUpdate(route.collectorId, { status: userStatus });
+    }
+
     // Award points for route optimization
-    if (status === 'completed' && route.aiOptimized) {
+    if (status === 'completed' && route.aiOptimized && route.collectorId) {
       await RewardTransaction.create({
         userId: route.collectorId,
         type: 'earned',
@@ -114,9 +179,26 @@ router.put('/route/:routeId/status', async (req, res) => {
       });
     }
 
+    // Emit socket update
+    try {
+      const { getIO } = require('../socket');
+      const io = getIO();
+      if (io) {
+        io.emit('collector-status-update', {
+          routeId: route._id,
+          routeCode: route.routeCode,
+          status: updatedRoute.status,
+          collectorId: route.collectorId
+        });
+      }
+    } catch (sErr) {
+      console.warn("Socket notification warning:", sErr.message);
+    }
+
     res.json(updatedRoute);
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error updating route status:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
@@ -132,7 +214,7 @@ router.post('/collection', async (req, res) => {
       wasteTypes,
       location: {
         type: 'Point',
-        coordinates: [parseFloat(longitude), parseFloat(latitude)]
+        coordinates: [parseFloat(longitude || 77.2090), parseFloat(latitude || 28.6139)]
       },
       notes,
       status: 'completed',
@@ -167,8 +249,13 @@ router.post('/collection', async (req, res) => {
 // Get route details
 router.get('/route/:routeId', async (req, res) => {
   try {
-    const route = await Route.findById(req.params.routeId)
-      .populate('collectorId', 'username');
+    let route;
+    if (mongoose.Types.ObjectId.isValid(req.params.routeId)) {
+      route = await Route.findById(req.params.routeId).populate('collectorId', 'username');
+    }
+    if (!route) {
+      route = await Route.findOne({ routeCode: req.params.routeId }).populate('collectorId', 'username');
+    }
 
     if (!route) {
       return res.status(404).json({ message: 'Route not found' });
@@ -194,7 +281,7 @@ router.get('/collections/:userId', async (req, res) => {
 });
 
 function getTimeAgo(date) {
-  const seconds = Math.floor((new Date() - date) / 1000);
+  const seconds = Math.floor((new Date() - new Date(date)) / 1000);
   
   if (seconds < 60) return 'Just now';
   if (seconds < 3600) return `${Math.floor(seconds / 60)} mins ago`;
