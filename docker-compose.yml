@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  backend:
+    image: shivamdevthakur/wastewise-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      
+    container_name: wastewise-backend
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - NODE_ENV=production
+    restart: always
+    networks:
+      - wisenet
+
+  frontend:
+    image: shivamdevthakur/wastewise-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      
+    container_name: wastewise-frontend
+    ports:
+      - "5173:5173"
+    env_file:
+      - ./frontend/.env
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - backend2
+      - backend
+    restart: always
+    networks:
+      - wisenet
+  backend2:
+    image: shivamdevthakur/wastewise-backend2:latest
+    build:
+      context: ./backend2
+      dockerfile: Dockerfile
+    container_name: wastewise-backend2
+    networks:
+      - wisenet
+    ports:
+      - "8000:8000"
+    # restart: always
+networks:
+  wisenet:
+    driver: bridge
