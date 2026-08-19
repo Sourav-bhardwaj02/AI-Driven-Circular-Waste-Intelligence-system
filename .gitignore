@@ -1,0 +1,65 @@
+# ==========================================
+# WasteWise — Root .gitignore
+# ==========================================
+
+# ---- CRITICAL: Environment / Secrets ----
+.env
+.env.*
+!.env.example
+!.env.local.example
+!.env.*.example
+
+# ---- Dependencies ----
+node_modules/
+**/node_modules/
+
+# ---- Build outputs ----
+dist/
+dist-ssr/
+build/
+**/dist/
+
+# ---- Python (backend2) ----
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+venv/
+.venv/
+env/
+*.egg-info/
+
+# ---- Logs ----
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---- OS / Editor ----
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ---- Uploads (user-uploaded files) ----
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# ---- Misc ----
+*.local
+*.cache
+*.db
+*.sqlite
+*.sqlite3
+
+# TACO experiment notebooks
+backend2/TACO-master/*.ipynb
+backend2/TACO-master/detector/*.ipynb

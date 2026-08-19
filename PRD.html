@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>WasteWise — Product Requirement Document (PRD)</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    
+    @page {
+        size: A4;
+        margin: 20mm 15mm 20mm 15mm;
+        @bottom-right {
+            content: "Page " counter(page);
+            font-family: 'Inter', sans-serif;
+            font-size: 9pt;
+            color: #64748b;
+        }
+    }
+
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: #1e293b;
+        line-height: 1.6;
+        font-size: 10.5pt;
+        background-color: #ffffff;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Header Banner */
+    .banner {
+        background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #10b981 100%);
+        color: #ffffff;
+        padding: 30px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.3);
+    }
+
+    .banner h1 {
+        color: #ffffff !important;
+        margin: 0 0 10px 0 !important;
+        font-size: 24pt !important;
+        font-weight: 800;
+        border: none !important;
+        padding: 0 !important;
+    }
+
+    .banner p {
+        margin: 4px 0;
+        font-size: 11pt;
+        opacity: 0.95;
+    }
+
+    h1, h2, h3, h4 {
+        color: #0f172a;
+        font-weight: 700;
+        page-break-after: avoid;
+    }
+
+    h1 {
+        font-size: 20pt;
+        border-bottom: 2.5px solid #10b981;
+        padding-bottom: 8px;
+        margin-top: 30px;
+        margin-bottom: 16px;
+    }
+
+    h2 {
+        font-size: 14pt;
+        color: #047857;
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: 6px;
+        margin-top: 26px;
+        margin-bottom: 12px;
+    }
+
+    h3 {
+        font-size: 12pt;
+        color: #1e293b;
+        margin-top: 20px;
+        margin-bottom: 10px;
+    }
+
+    h4 {
+        font-size: 11pt;
+        color: #334155;
+        margin-top: 14px;
+        margin-bottom: 6px;
+    }
+
+    p, li {
+        font-size: 10pt;
+        color: #334155;
+    }
+
+    /* Tables */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 18px 0;
+        font-size: 9.5pt;
+        page-break-inside: avoid;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    th {
+        background-color: #047857;
+        color: #ffffff;
+        text-align: left;
+        padding: 10px 14px;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 8.5pt;
+        letter-spacing: 0.5px;
+    }
+
+    td {
+        padding: 9px 14px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #334155;
+    }
+
+    tr:nth-child(even) {
+        background-color: #f8fafc;
+    }
+
+    tr:hover {
+        background-color: #f1f5f9;
+    }
+
+    /* Code & Pre */
+    code {
+        font-family: 'Consolas', 'Courier New', monospace;
+        background-color: #f1f5f9;
+        color: #0f766e;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 9pt;
+    }
+
+    pre {
+        background-color: #0f172a;
+        color: #e2e8f0;
+        padding: 16px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 9pt;
+        line-height: 1.5;
+        page-break-inside: avoid;
+    }
+
+    pre code {
+        background-color: transparent;
+        color: #38bdf8;
+        padding: 0;
+    }
+
+    /* Blockquotes & Badges */
+    blockquote {
+        border-left: 4px solid #10b981;
+        background-color: #ecfdf5;
+        margin: 16px 0;
+        padding: 12px 18px;
+        border-radius: 0 8px 8px 0;
+        color: #065f46;
+        font-style: italic;
+    }
+
+    ul, ol {
+        padding-left: 22px;
+        margin-top: 8px;
+        margin-bottom: 14px;
+    }
+
+    li {
+        margin-bottom: 4px;
+    }
+
+    hr {
+        border: none;
+        height: 1px;
+        background: #e2e8f0;
+        margin: 28px 0;
+    }
+</style>
+</head>
+<body>
+
+<div class="banner">
+    <h1>WasteWise Platform PRD</h1>
+    <p><strong>AI-Driven Circular Waste Intelligence System</strong></p>
+    <p>Version: 2.0.0 | Author: Antigravity AI & WasteWise Core Engineering Team</p>
+    <p>Date: August 2026 | Document Status: Approved Blueprint</p>
+</div>
+
+<h1 id="wastewise-product-requirement-document-prd-platform-blueprint">WasteWise — Product Requirement Document (PRD) &amp; Platform Blueprint</h1>
+<blockquote>
+<p><strong>Version:</strong> 2.1.0 (Production-Ready Architecture &amp; Logic Hardening)<br />
+<strong>Target Platform:</strong> WasteWise AI-Driven Circular Waste Intelligence System<br />
+<strong>Tech Stack:</strong> React 18 (TypeScript), Tailwind CSS, Framer Motion, Leaflet + OSM, Express.js (Node.js), MongoDB (Atlas + In-Memory Fallback), OSRM Routing Engine, FastAPI (TACO Vision AI)</p>
+</blockquote>
+<hr />
+<h2 id="table-of-contents">📋 Table of Contents</h2>
+<ol>
+<li><a href="#1-executive-summary--vision">Executive Summary &amp; Vision</a></li>
+<li><a href="#2-complete-technology-stack--architecture">Complete Technology Stack &amp; Architecture</a></li>
+<li><a href="#3-user-personas--role-based-access-control">User Personas &amp; Role-Based Access Control</a></li>
+<li><a href="#4-page-by-page-product-architecture">Page-by-Page Product Architecture</a></li>
+<li><a href="#5-deep-dive-feature-specifications">Deep-Dive Feature Specifications</a></li>
+<li><a href="#51-osrm-road-navigation--live-tracking">5.1 OSRM Road Navigation &amp; Live Tracking</a></li>
+<li><a href="#52-society--community-leaderboard">5.2 Society &amp; Community Leaderboard</a></li>
+<li><a href="#53-real-interactive-rewards--voucher-system">5.3 Real Interactive Rewards &amp; Voucher System</a></li>
+<li><a href="#54-interactive-ai-waste-classifier--camera-scanner-studio">5.4 Interactive AI Waste Classifier &amp; Camera Scanner Studio</a></li>
+<li><a href="#55-garbage-reporting--complaint-dispatch">5.5 Garbage Reporting &amp; Complaint Dispatch</a></li>
+<li><a href="#56-collector--admin-dashboards">5.6 Collector &amp; Admin Dashboards</a></li>
+<li><a href="#6-platform-engineering-audit-system-fixes--hardening-log-v210">Platform Engineering Audit, System Fixes &amp; Hardening Log (v2.1.0)</a></li>
+<li><a href="#7-step-by-step-user-guide-how-to-test--use">Step-by-Step User Guide (How to Test &amp; Use)</a></li>
+<li><a href="#8-api-route-mapping--security-model">API Route Mapping &amp; Security Model</a></li>
+</ol>
+<hr />
+<h2 id="1-executive-summary-vision">1. Executive Summary &amp; Vision</h2>
+<p><strong>WasteWise</strong> is an end-to-end, AI-driven circular waste intelligence platform designed for municipal sanitation authorities (such as MCD in Delhi), waste collection workforces, and urban citizens. It unifies operations through:<br />
+- <strong>Real-world street navigation</strong> (powered by OpenStreetMap + OSRM) instead of straight-line coordinates.<br />
+- <strong>AI-powered waste segregation &amp; visual inspection</strong> via TACO (Trash Annotations in Context) taxonomy, providing instant biodegradable, recyclable, and hazardous classifications.<br />
+- <strong>Community gamification</strong> with society/RWA rankings, Eco-Scores, and digital utility bill voucher redemptions.<br />
+- <strong>Zero-downtime database architecture</strong> featuring automatic fallback hierarchy (MongoDB Atlas → Local MongoDB → In-Memory MongoDB).<br />
+- <strong>Real-time operations tracking</strong> for collection vehicles and citizen grievance resolution.</p>
+<hr />
+<h2 id="2-complete-technology-stack-architecture">2. Complete Technology Stack &amp; Architecture</h2>
+<h3 id="1-frontend-technologies-ports-5173-5174">1. Frontend Technologies (Ports 5173 &amp; 5174)</h3>
+<ul>
+<li><strong>Core Framework:</strong> React 18 with TypeScript</li>
+<li><strong>Build Tool &amp; Bundler:</strong> Vite 5</li>
+<li><strong>Styling &amp; UI Tokens:</strong> Tailwind CSS + Vanilla CSS variables + Glassmorphic dark/light aesthetics</li>
+<li><strong>UI Components:</strong> Shadcn UI component primitives (<code>@/components/ui/*</code>)</li>
+<li><strong>Icons &amp; Visuals:</strong> Lucide React (<code>lucide-react</code>)</li>
+<li><strong>Animations &amp; Micro-interactions:</strong> Framer Motion (<code>framer-motion</code>)</li>
+<li><strong>Mapping &amp; GIS Engine:</strong> Leaflet + OpenStreetMap Tiles (<code>https://tile.openstreetmap.org/{z}/{x}/{y}.png</code>)</li>
+<li><strong>Routing &amp; State Management:</strong> React Router DOM v6 + React Context API (<code>AuthContext</code>, <code>DashboardContext</code>)</li>
+</ul>
+<h3 id="2-backend-api-services-port-5000">2. Backend &amp; API Services (Port 5000)</h3>
+<ul>
+<li><strong>Runtime:</strong> Node.js v20+</li>
+<li><strong>Web Framework:</strong> Express.js 5</li>
+<li><strong>Authentication &amp; Security:</strong> JWT (JSON Web Tokens) with 64-character secret key + bcryptjs password hashing</li>
+<li><strong>File Upload Handler:</strong> Multer (local disk storage for citizen photo reports)</li>
+<li><strong>API Proxy Architecture:</strong> Express router proxy for OSRM navigation service (<code>/api/routing/route</code>) to prevent external API key leaks in client bundle</li>
+<li><strong>Real-time WebSockets:</strong> Socket.IO for live truck tracking and notification broadcasting</li>
+</ul>
+<h3 id="3-ai-vision-service-port-8000">3. AI Vision Service (Port 8000)</h3>
+<ul>
+<li><strong>Runtime:</strong> Python 3.10+ (FastAPI + Uvicorn)</li>
+<li><strong>Dataset &amp; Model:</strong> TACO (Trash Annotations in Context) 60-category waste taxonomy mapped to 3 circular streams (Biodegradable, Recyclable, Hazardous)</li>
+<li><strong>Vision Processing:</strong> OpenCV headless (<code>cv2</code>) + NumPy for real-time frame classification and bounding box localization</li>
+</ul>
+<h3 id="4-database-data-modeling">4. Database &amp; Data Modeling</h3>
+<ul>
+<li><strong>Database Engine:</strong> MongoDB Atlas / Local MongoDB / <code>mongodb-memory-server</code></li>
+<li><strong>Object Data Modeling (ODM):</strong> Mongoose 8</li>
+<li><strong>Geospatial Features:</strong> 2dsphere GeoJSON Point indexing for real-time location tracking &amp; distance calculation</li>
+<li><strong>Data Models:</strong> <code>User</code>, <code>WasteCollection</code>, <code>Complaint</code>, <code>RewardTransaction</code>, <code>Route</code>, <code>Grievance</code></li>
+</ul>
+<h3 id="5-routing-navigation-infrastructure">5. Routing &amp; Navigation Infrastructure</h3>
+<ul>
+<li><strong>Routing Machine:</strong> OSRM (Open Source Routing Machine) Driving Engine (<code>/route/v1/driving/...</code>)</li>
+<li><strong>Route Optimizer:</strong> Custom 2-layer greedy nearest-neighbor ordering + OSRM road polyline generator</li>
+<li><strong>Polyline Decoder:</strong> Dynamic GeoJSON coordinate decoder for Leaflet street rendering</li>
+</ul>
+<hr />
+<h2 id="3-user-personas-role-based-access-control">3. User Personas &amp; Role-Based Access Control</h2>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Access Level</th>
+<th>Primary Objectives</th>
+<th>Default Test Login</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Citizen</strong></td>
+<td>Public / Logged In</td>
+<td>Report uncollected garbage, track collection trucks, classify waste with AI, earn &amp; redeem rewards, view society rank.</td>
+<td><code>citizen@wastewise.com</code> / <code>citizen123</code></td>
+</tr>
+<tr>
+<td><strong>Collector</strong></td>
+<td>Authenticated</td>
+<td>View daily assigned collection route, navigate using turn-by-turn road geometry, mark stops completed, track shift metrics.</td>
+<td><code>collector@wastewise.com</code> / <code>collector123</code></td>
+</tr>
+<tr>
+<td><strong>Identifier</strong></td>
+<td>Authenticated</td>
+<td>Municipal waste quality officer inspecting sorting purity, baling batches, and logging circular records.</td>
+<td><code>identifier@wastewise.com</code> / <code>identifier123</code></td>
+</tr>
+<tr>
+<td><strong>Admin</strong></td>
+<td>Superuser</td>
+<td>Monitor city-wide waste statistics, assign collection routes to collectors, triage citizen complaints, manage user directory.</td>
+<td><code>admin@wastewise.com</code> / <code>admin123</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-page-by-page-product-architecture">4. Page-by-Page Product Architecture</h2>
+<pre><code>                                 ┌────────────────────────┐
+                                 │   Landing Page (/)     │
+                                 └───────────┬────────────┘
+                                             │
+      ┌───────────────────┬──────────────────┼───────────────────┬───────────────────┐
+      ▼                   ▼                  ▼                   ▼                   ▼
+┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+│ Citizen      │   │ Collector    │   │ Admin        │   │ Leaderboard  │   │ AI Waste     │
+│ Dashboard    │   │ Dashboard    │   │ Dashboard    │   │ Page         │   │ Classifier   │
+│ (/citizen)   │   │ (/collector) │   │ (/admin)     │   │ (/leaderboard)   │ (/classifier)│
+└──────┬───────┘   └──────┬───────┘   └──────┬───────┘   └──────────────┘   └──────────────┘
+       │                  │                  │
+       ├─ AI Classifier   ├─ Live Route Nav  ├─ Grievance Triage
+       ├─ Report Garbage  └─ OSRM Metrics    ├─ Collector Dispatch
+       └─ Track Truck                        └─ City Analytics
+</code></pre>
+<hr />
+<h2 id="5-deep-dive-feature-specifications">5. Deep-Dive Feature Specifications</h2>
+<h3 id="51-osrm-road-navigation-live-tracking">5.1 OSRM Road Navigation &amp; Live Tracking</h3>
+<ul>
+<li><strong>Frontend Files:</strong> <code>src/components/LiveMap.tsx</code>, <code>src/services/osrmRouting.ts</code>, <code>src/services/routeOptimizer.ts</code></li>
+<li><strong>Backend File:</strong> <code>backend/routes/routing.js</code> (<code>POST /api/routing/route</code>)</li>
+<li><strong>How It Works:</strong></li>
+<li>Frontend submits depot, collection coordinates, and processing plant location to <code>/api/routing/route</code>.</li>
+<li>Backend proxy forwards request securely to the OSRM Driving Engine (<code>/route/v1/driving/...</code>).</li>
+<li>Returns high-precision Polyline geometry (<code>overview=full&amp;geometries=geojson</code>).</li>
+<li>Leaflet renders the dual-polyline: <strong>Dimmed Grey</strong> for completed path, <strong>Emerald Green</strong> for active street route.</li>
+<li>Smooth interpolation moves the 🚛 truck marker along exact street turns.</li>
+</ul>
+<h3 id="52-society-community-leaderboard">5.2 Society &amp; Community Leaderboard</h3>
+<ul>
+<li><strong>Frontend File:</strong> <code>src/pages/LeaderboardPage.tsx</code></li>
+<li><strong>Backend File:</strong> <code>backend/routes/leaderboard.js</code> (<code>GET /api/leaderboard/societies</code>, <code>/citizens</code>, <code>/collectors</code>, <code>/identifiers</code>, <code>/overview</code>)</li>
+<li><strong>How It Works:</strong></li>
+<li>Backend aggregates MongoDB <code>User</code> documents grouped by <code>profile.society</code>.</li>
+<li>Calculates total members, total points, average level, and total reports + collections.</li>
+<li>Computes the <strong>Eco-Score</strong> (composite rating of points efficiency and community activity).</li>
+<li>Renders top 3 in an animated 3D podium and displays comprehensive workforce rankings for Citizens, Societies, Collectors, and Verification Officers.</li>
+</ul>
+<h3 id="53-real-interactive-rewards-voucher-system">5.3 Real Interactive Rewards &amp; Voucher System</h3>
+<ul>
+<li><strong>Frontend File:</strong> <code>src/pages/RewardsPage.tsx</code></li>
+<li><strong>Backend File:</strong> <code>backend/routes/citizen.js</code> (<code>POST /api/citizen/daily-claim</code>, <code>POST /api/citizen/redeem</code>, <code>GET /api/citizen/rewards/:userId</code>)</li>
+<li><strong>How It Works:</strong></li>
+<li>Citizen clicks <strong>Daily Check-in</strong> to claim +25 Pts once every 24 hours.</li>
+<li>When selecting a voucher (e.g. DJB Water Bill - 500 Pts), the system validates point balance.</li>
+<li>Generates a random unique voucher code (e.g. <code>WW-WATER-7Y82A</code>) and updates MongoDB points balance.</li>
+<li>The code is displayed in a popup with a "Copy Code" button and saved in the user's transaction history.</li>
+</ul>
+<h3 id="54-interactive-ai-waste-classifier-camera-scanner-studio">5.4 Interactive AI Waste Classifier &amp; Camera Scanner Studio</h3>
+<ul>
+<li><strong>Frontend File:</strong> <code>src/pages/ClassifierPage.tsx</code> (<code>/classifier</code>)</li>
+<li><strong>Backend File:</strong> <code>backend2/main.py</code> (<code>POST /api/classify/</code>)</li>
+<li><strong>How It Works:</strong></li>
+<li>User selects <strong>AI Vision Classifier</strong> mode.</li>
+<li>Offers dual input options: <strong>Drag &amp; Drop image file upload</strong> or <strong>Live Webcam Stream capture</strong>.</li>
+<li>Transmits base64 image data to FastAPI TACO Computer Vision engine.</li>
+<li>Renders dynamic bounding boxes over detected waste objects.</li>
+<li>Provides instant classification:<ul>
+<li>🟢 <strong>Biodegradable</strong>: Organic compost guidelines, nitrogen/carbon value, green bin advice.</li>
+<li>🔵 <strong>Recyclable</strong>: Polymer / metal alloy specifications, circular recovery value, blue bin advice.</li>
+<li>🔴 <strong>Hazardous</strong>: Safe handling procedures, e-waste / chemical precautions, red bin advice.</li>
+</ul>
+</li>
+<li>Includes <strong>"Save Detection to Circular Ledger"</strong> action to append records into the live spreadsheet.</li>
+</ul>
+<h3 id="55-garbage-reporting-complaint-dispatch">5.5 Garbage Reporting &amp; Complaint Dispatch</h3>
+<ul>
+<li><strong>Frontend Files:</strong> <code>src/pages/CitizenDashboard.tsx</code>, <code>src/pages/CommunityPage.tsx</code></li>
+<li><strong>Backend Files:</strong> <code>backend/routes/complaint.js</code>, <code>backend/routes/grievance.js</code></li>
+<li><strong>How It Works:</strong></li>
+<li>Citizens take a photo of an uncollected waste heap or overflowing bin.</li>
+<li>Geolocation automatically captures exact GPS coordinates.</li>
+<li>Stored in MongoDB with status <code>Pending</code> and prioritized by upvotes and severity.</li>
+<li>MCD Admins review complaints on the map and dispatch to nearby collector routes.</li>
+</ul>
+<h3 id="56-collector-admin-dashboards">5.6 Collector &amp; Admin Dashboards</h3>
+<ul>
+<li><strong>Collector Dashboard:</strong> Shows active route code (e.g. <code>DELHI-SOUTH-01</code>), GPS route toggle (Start/Pause), completed pickup progress, and daily reward earnings.</li>
+<li><strong>Admin Dashboard:</strong> Aggregated city-wide analytics, user directory spreadsheet (Citizens, Collectors, Admins), live vehicle map, and feedback triage.</li>
+</ul>
+<hr />
+<h2 id="6-platform-engineering-audit-system-fixes-hardening-log-v210">6. Platform Engineering Audit, System Fixes &amp; Hardening Log (v2.1.0)</h2>
+<p>During the comprehensive v2.1.0 platform audit, the following critical issues were identified, fixed, and verified:</p>
+<h3 id="1-database-connection-resilience-login-timeout-fix">1. Database Connection Resilience &amp; Login Timeout Fix</h3>
+<ul>
+<li><strong>Problem:</strong> Remote MongoDB Atlas URI had IP whitelisting constraints that caused Mongoose query buffering to time out after 10,000ms (<code>MongooseError: Operation users.findOne() buffering timed out</code>), preventing user logins.</li>
+<li><strong>Fix:</strong> Enhanced <code>backend/config/database.js</code> with an automated fallback hierarchy (Atlas with 4s timeout → Local MongoDB → <code>mongodb-memory-server</code>). When offline or when Atlas is unreachable, an in-memory database automatically launches and auto-seeds all demo accounts instantly.</li>
+</ul>
+<h3 id="2-multi-collection-seed-data-expansion">2. Multi-Collection Seed Data Expansion</h3>
+<ul>
+<li><strong>Problem:</strong> <code>backend/scripts/seed.js</code> was previously only seeding the <code>User</code> collection. Collections like <code>Route</code>, <code>WasteCollection</code>, <code>Complaint</code>, <code>Grievance</code>, and <code>RewardTransaction</code> were left empty, forcing the Admin dashboard, Collector routes, and Community feeds to rely on client-side mock fallbacks.</li>
+<li><strong>Fix:</strong> Expanded <code>seed.js</code> to seed full interconnected datasets:</li>
+<li><strong>34 Users</strong> across all 4 roles (Admin, Identifier, Collector, Citizen).</li>
+<li><strong>3 Active GPS Routes</strong> (<code>DELHI-SOUTH-01</code>, <code>DELHI-NORTH-02</code>, <code>DELHI-EAST-03</code>) assigned to collectors with stops and estimated completion times.</li>
+<li><strong>15+ Waste Collection Batches</strong> across Delhi zones with dry, wet, and hazardous weight metrics.</li>
+<li><strong>15+ Geo-tagged Complaints</strong> with realistic statuses (Pending, In Progress, Resolved).</li>
+<li><strong>Community Grievances</strong> with upvote counts and citizen comment threads.</li>
+<li><strong>Reward Transaction Ledgers</strong> for all demo accounts.</li>
+</ul>
+<h3 id="3-interactive-ai-waste-classifier-restoration">3. Interactive AI Waste Classifier Restoration</h3>
+<ul>
+<li><strong>Problem:</strong> The <code>/classifier</code> page previously contained only a spreadsheet table without the interactive visual classifier promised on the homepage.</li>
+<li><strong>Fix:</strong> Rebuilt <code>ClassifierPage.tsx</code> with a dual-tab studio:</li>
+<li><strong>Tab 1:</strong> AI Vision Classifier with drag-and-drop upload, live webcam scanning, sample waste presets, bounding box overlays, confidence score, and segregation guidance connected to <code>POST http://localhost:8000/api/classify/</code>.</li>
+<li><strong>Tab 2:</strong> Circular Ledger Spreadsheet with search, multi-column filters (Category, Status, Zone), CSV/JSON exports, and manual record entry modals.</li>
+</ul>
+<h3 id="4-navigation-role-based-routing-fixes">4. Navigation &amp; Role-Based Routing Fixes</h3>
+<ul>
+<li><strong>Problem:</strong> In <code>Navbar.tsx</code>, Citizens were excluded from the profile dropdown Dashboard link (<code>userRole !== "citizen"</code>), even though <code>/dashboard/citizen</code> existed. Additionally, mobile menu click handlers were missing on the Leaderboard link.</li>
+<li><strong>Fix:</strong> Updated <code>Navbar.tsx</code> so all authenticated roles have direct dashboard access (<code>/dashboard/citizen</code>, <code>/dashboard/collector</code>, <code>/dashboard/admin</code>), added direct <code>/classifier</code> link in navigation, and fixed mobile menu event handlers.</li>
+</ul>
+<h3 id="5-community-page-public-access">5. Community Page Public Access</h3>
+<ul>
+<li><strong>Problem:</strong> <code>CommunityPage.tsx</code> blocked data fetching when users were unauthenticated, rendering an empty page to visitors.</li>
+<li><strong>Fix:</strong> Enabled public fetching of community grievances and society standings; unauthenticated users are smoothly prompted to log in only when attempting an action (upvoting, commenting, submitting a report).</li>
+</ul>
+<h3 id="6-municipal-workforce-leaderboard-activation">6. Municipal Workforce Leaderboard Activation</h3>
+<ul>
+<li><strong>Problem:</strong> <code>ENABLE_COLLECTORS_AND_AI</code> was hardcoded to <code>false</code> in <code>LeaderboardPage.tsx</code>, hiding municipal collectors and verification officers from public rankings.</li>
+<li><strong>Fix:</strong> Set <code>ENABLE_COLLECTORS_AND_AI = true</code> to display rankings across Citizens, Societies, Collectors, and Verification Officers.</li>
+</ul>
+<h3 id="7-code-hygiene-zero-linter-warnings">7. Code Hygiene &amp; Zero Linter Warnings</h3>
+<ul>
+<li><strong>Fix:</strong> Updated <code>.vscode/settings.json</code> with CSS linting rules for Tailwind, fixed empty interfaces in Shadcn UI primitives (<code>CommandDialogProps</code>, <code>TextareaProps</code>), and tuned <code>eslint.config.js</code>. Full verification with <code>npx tsc --noEmit</code> and <code>npm run lint</code> yields <strong>0 errors and 0 warnings</strong>.</li>
+</ul>
+<h3 id="8-droidcam-linux-client-installation">8. DroidCam Linux Client Installation</h3>
+<ul>
+<li><strong>Fix:</strong> Downloaded and installed <code>droidcam</code> and <code>droidcam-cli</code> binaries into <code>/home/vishal/.local/bin/</code> with desktop launcher in <code>~/.local/share/applications/droidcam.desktop</code> for remote mobile webcam streaming support.</li>
+</ul>
+<hr />
+<h2 id="7-step-by-step-user-guide-how-to-test-use">7. Step-by-Step User Guide (How to Test &amp; Use)</h2>
+<h3 id="scenario-a-testing-as-a-citizen">Scenario A: Testing as a Citizen</h3>
+<ol>
+<li>Navigate to <a href="http://localhost:5173">http://localhost:5173</a>.</li>
+<li>Click <strong>Login</strong> and sign in with: <code>citizen@wastewise.com</code> / <code>citizen123</code>.</li>
+<li><strong>AI Classifier:</strong> Click <strong>AI Classifier</strong> (<code>/classifier</code>), drag &amp; drop any image or click a sample waste item (e.g. <em>Plastic PET Bottle</em>), view AI classification &amp; bin advice, then click <strong>"Save Detection to Circular Ledger"</strong>.</li>
+<li><strong>Daily Check-in &amp; Rewards:</strong> Navigate to <strong>Rewards</strong> (<code>/rewards</code>), claim your <strong>Daily Check-in (+25 Pts)</strong>, and redeem a utility voucher (e.g. <em>DJB Water Bill - 500 Pts</em>).</li>
+<li><strong>Community Feed:</strong> Go to <strong>Community</strong> (<code>/community</code>), view nearby grievances, upvote reports, or submit a new neighborhood cleanup request.</li>
+<li><strong>Live Tracking:</strong> Visit <strong>Live Tracking</strong> (<code>/tracking</code>) to monitor collection truck ETAs for your sector.</li>
+</ol>
+<h3 id="scenario-b-testing-as-a-waste-collector">Scenario B: Testing as a Waste Collector</h3>
+<ol>
+<li>Login with: <code>collector@wastewise.com</code> / <code>collector123</code>.</li>
+<li>Navigate to <strong>Collector Dashboard</strong> (<code>/dashboard/collector</code>).</li>
+<li>View the assigned route (<code>DELHI-SOUTH-01</code>) and interactive OSRM map.</li>
+<li>Toggle <strong>"Start Route Navigation"</strong> to activate GPS movement and track pickup completion.</li>
+</ol>
+<h3 id="scenario-c-testing-as-an-mcd-admin">Scenario C: Testing as an MCD Admin</h3>
+<ol>
+<li>Login with: <code>admin@wastewise.com</code> / <code>admin123</code>.</li>
+<li>Navigate to <strong>Admin Dashboard</strong> (<code>/dashboard/admin</code>).</li>
+<li>Explore the <strong>Overview</strong>, <strong>User Directory Spreadsheet</strong> (Citizens, Collectors, Admins), <strong>Analytics Charts</strong>, and <strong>Feedback Triage</strong>.</li>
+<li>Export data sheets to CSV with one click.</li>
+</ol>
+<hr />
+<h2 id="8-api-route-mapping-security-model">8. API Route Mapping &amp; Security Model</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+<th>Access Level</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/auth/login</code></td>
+<td>User authentication &amp; JWT issuance</td>
+<td>Public</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/auth/me</code></td>
+<td>Current session user profile verification</td>
+<td>Authenticated</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/routing/route</code></td>
+<td>OSRM Road navigation proxy</td>
+<td>Internal Proxy</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/admin/dashboard</code></td>
+<td>Aggregated municipal analytics &amp; metrics</td>
+<td>Admin Only</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/admin/users</code></td>
+<td>Complete user directory categorized by role</td>
+<td>Admin Only</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/admin/feedbacks</code></td>
+<td>Citizen grievance feedback logs</td>
+<td>Admin Only</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/collector/dashboard/:id</code></td>
+<td>Collector active routes, stops &amp; stats</td>
+<td>Collector / Admin</td>
+</tr>
+<tr>
+<td><code>PUT</code></td>
+<td><code>/api/collector/route/status</code></td>
+<td>Update route status (assigned / in_progress)</td>
+<td>Collector / Admin</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/citizen/dashboard/:id</code></td>
+<td>Citizen reward stats, nearby trucks &amp; reports</td>
+<td>Citizen / Admin</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/citizen/daily-claim</code></td>
+<td>Daily +25 Eco-Points check-in claim</td>
+<td>Authenticated</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/citizen/redeem</code></td>
+<td>Digital voucher code generation</td>
+<td>Authenticated</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/grievance</code></td>
+<td>Community grievance posts &amp; vote counts</td>
+<td>Public</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/grievance</code></td>
+<td>Submit new geo-tagged community report</td>
+<td>Authenticated</td>
+</tr>
+<tr>
+<td><code>PUT</code></td>
+<td><code>/api/grievance/:id/vote</code></td>
+<td>Upvote community grievance priority</td>
+<td>Authenticated</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/leaderboard/overview</code></td>
+<td>Platform-wide leaderboard summary</td>
+<td>Public</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/leaderboard/citizens</code></td>
+<td>Ranked citizens by Eco-Points</td>
+<td>Public</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/leaderboard/societies</code></td>
+<td>Ranked residential societies by Eco-Score</td>
+<td>Public</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/leaderboard/collectors</code></td>
+<td>Ranked municipal collection drivers</td>
+<td>Public</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/leaderboard/identifiers</code></td>
+<td>Ranked waste verification officers</td>
+<td>Public</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>http://localhost:8000/api/classify/</code></td>
+<td>TACO AI Computer Vision classification</td>
+<td>Public / Services</td>
+</tr>
+</tbody>
+</table>
+
+</body>
+</html>
