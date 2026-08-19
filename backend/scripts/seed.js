@@ -24,8 +24,25 @@ const seedUsers = async () => {
         email: 'admin@wastewise.com',
         password: await bcrypt.hash('admin123', salt),
         role: 'admin',
-        profile: { firstName: 'MCD', lastName: 'Admin', phone: '9876543210', address: 'Delhi MCD HQ', zone: 'Central Delhi' },
+        profile: { firstName: 'MCD', lastName: 'Admin', phone: '9876543210', address: 'Delhi MCD HQ', zone: 'Central Delhi', badgeNumber: 'ADMIN-01' },
         rewardPoints: 1000, level: 10, isVerified: true
+      },
+      // ── Identifiers (Waste Verification Officers) ─────────────
+      {
+        username: 'identifier_vikram',
+        email: 'identifier@wastewise.com',
+        password: await bcrypt.hash('identifier123', salt),
+        role: 'identifier',
+        profile: { firstName: 'Vikram', lastName: 'Das', phone: '9876543299', address: 'Zone 4 Waste Processing Center', zone: 'South Delhi', badgeNumber: 'ID-7842', facilityZone: 'Zone 4 Sorting Depot' },
+        rewardPoints: 950, level: 8, isVerified: true
+      },
+      {
+        username: 'identifier_ananya',
+        email: 'verifier@wastewise.com',
+        password: await bcrypt.hash('identifier123', salt),
+        role: 'identifier',
+        profile: { firstName: 'Ananya', lastName: 'Roy', phone: '9876543288', address: 'Central Circular Lab', zone: 'Central Delhi', badgeNumber: 'ID-5521', facilityZone: 'Central Recovery Hub' },
+        rewardPoints: 880, level: 7, isVerified: true
       },
       // ── Collectors ─────────────────────────────────────────────
       {

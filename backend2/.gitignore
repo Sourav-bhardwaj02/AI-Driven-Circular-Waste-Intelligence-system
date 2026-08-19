@@ -2,3 +2,147 @@ venv/
 __pycache__/
 *.pt
 .vscode/
+
+# ==============================
+
+# Python
+
+# ==============================
+
+**pycache**/
+*.py[cod]
+*$py.class
+*.so
+
+# ==============================
+
+# Virtual Environment
+
+# ==============================
+
+venv/
+.venv/
+env/
+ENV/
+
+# ==============================
+
+# Environment Variables / Secrets
+
+# ==============================
+
+.env
+.env.*
+!.env.example
+
+# ==============================
+
+# Jupyter Notebook
+
+# ==============================
+
+.ipynb_checkpoints/
+
+# ==============================
+
+# Dataset
+
+# ==============================
+
+# TACO dataset
+
+backend2/TACO-master/data/
+
+# Downloaded datasets
+
+data/
+datasets/
+dataset/
+
+# ==============================
+
+# Machine Learning
+
+# ==============================
+
+# Model weights
+
+*.pt
+*.pth
+*.onnx
+*.weights
+*.ckpt
+
+# Training outputs
+
+runs/
+wandb/
+mlruns/
+
+# ==============================
+
+# Logs / Temporary Files
+
+# ==============================
+
+*.log
+logs/
+tmp/
+temp/
+
+# ==============================
+
+# IDE / Editor
+
+# ==============================
+
+.vscode/
+.idea/
+
+# ==============================
+
+# OS Files
+
+# ==============================
+
+.DS_Store
+Thumbs.db
+
+# ==============================
+
+# Python Build
+
+# ==============================
+
+build/
+dist/
+*.egg-info/
+
+# ==============================
+
+# Coverage / Testing
+
+# ==============================
+
+.coverage
+.coverage.*
+.pytest_cache/
+htmlcov/
+
+# ==============================
+
+# Local Development
+
+# ==============================
+
+*.swp
+*.swo
+*~
+
+# ==============================
+
+# Docker
+
+# ==============================
+
+.dockerignore

@@ -17,7 +17,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['admin', 'citizen', 'collector'],
+    enum: ['admin', 'citizen', 'collector', 'identifier'],
     required: true
   },
   profile: {
@@ -26,7 +26,9 @@ const userSchema = new mongoose.Schema({
     phone: String,
     address: String,
     society: String,     // e.g. 'Green Park RWA', 'Sector 11 Society'
-    zone: String         // e.g. 'South Delhi', 'North Delhi'
+    zone: String,        // e.g. 'South Delhi', 'North Delhi'
+    badgeNumber: String, // e.g. 'ID-7842'
+    facilityZone: String // e.g. 'Zone 4 Sorting Facility'
   },
   rewardPoints: {
     type: Number,

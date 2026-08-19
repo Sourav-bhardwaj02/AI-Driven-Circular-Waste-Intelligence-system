@@ -56,3 +56,7 @@ backend/uploads/*
 # ---- Misc ----
 *.local
 *.cache
+
+# TACO experiment notebooks
+backend2/TACO-master/*.ipynb
+backend2/TACO-master/detector/*.ipynb
