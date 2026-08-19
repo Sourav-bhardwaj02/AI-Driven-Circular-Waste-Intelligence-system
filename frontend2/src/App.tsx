@@ -24,8 +24,14 @@ import {
   Sparkles,
   BookOpen,
   Info,
-  ExternalLink
+  LogOut,
+  ShieldCheck,
+  BadgeCheck,
+  UserCheck
 } from "lucide-react";
+import { AuthScreen } from "./components/AuthScreen";
+import { authService } from "./services/authService";
+import { AuthUser } from "./types/auth";
 
 // ─── API CONFIG ───────────────────────────────────────────────
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
@@ -58,6 +64,7 @@ export interface WasteRecord {
   unit: string;
   notes: string;
   material?: string;
+  loggedBy?: string;
 }
 
 export interface TacoCategory {
@@ -95,7 +102,8 @@ const SAMPLE_RECORDS: WasteRecord[] = [
     quantity: 2,
     unit: "pcs",
     notes: "PET polymer, high circular recovery value",
-    material: "PET Polymer"
+    material: "PET Polymer",
+    loggedBy: "Vikram Das (ID-7842)"
   },
   {
     id: "TACO-102",
@@ -108,7 +116,8 @@ const SAMPLE_RECORDS: WasteRecord[] = [
     quantity: 0.4,
     unit: "kg",
     notes: "Decomposes into organic nitrogen compost",
-    material: "Organic Biomass"
+    material: "Organic Biomass",
+    loggedBy: "Vikram Das (ID-7842)"
   },
   {
     id: "TACO-103",
@@ -121,7 +130,8 @@ const SAMPLE_RECORDS: WasteRecord[] = [
     quantity: 3,
     unit: "pcs",
     notes: "Requires dedicated e-waste dropoff",
-    material: "Lithium / Heavy Metals"
+    material: "Lithium / Heavy Metals",
+    loggedBy: "Ananya Roy (ID-5521)"
   },
   {
     id: "TACO-104",
@@ -134,11 +144,16 @@ const SAMPLE_RECORDS: WasteRecord[] = [
     quantity: 1,
     unit: "pcs",
     notes: "100% infinitely recyclable metal alloy",
-    material: "Aluminium Alloy"
+    material: "Aluminium Alloy",
+    loggedBy: "Vikram Das (ID-7842)"
   },
 ];
 
 const App: React.FC = () => {
+  // ─── AUTHENTICATION STATE ───
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getStoredUser());
+  const [authChecking, setAuthChecking] = useState<boolean>(true);
+
   // ─── STATE: CAMERA & DETECTION ───
   const [isCameraOn, setIsCameraOn] = useState<boolean>(false);
   const [isFrozen, setIsFrozen] = useState<boolean>(false);
@@ -183,6 +198,14 @@ const App: React.FC = () => {
   const lastAutoLogRef = useRef<number>(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Verify Auth Session on Mount
+  useEffect(() => {
+    authService.verifySession().then((user) => {
+      if (user) setCurrentUser(user);
+      setAuthChecking(false);
+    });
+  }, []);
+
   // Save records to LocalStorage on update
   useEffect(() => {
     localStorage.setItem("wastewise_taco_records", JSON.stringify(records));
@@ -194,8 +217,22 @@ const App: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  // Logout Handler
+  const handleLogout = () => {
+    if (isCameraOn) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      setIsCameraOn(false);
+    }
+    authService.logout();
+    setCurrentUser(null);
+    showToast("Signed out of Identifier Portal");
+  };
+
   // ─── BACKEND HEALTH & TACO TAXONOMY LOAD ───
   useEffect(() => {
+    if (!currentUser) return;
+
     const checkBackend = () => {
       axios
         .get(`${API_URL}/status/`)
@@ -216,7 +253,7 @@ const App: React.FC = () => {
       .catch(() => {});
 
     return () => clearInterval(t);
-  }, []);
+  }, [currentUser]);
 
   // ─── DRAW BOUNDING BOXES ON CANVAS ───
   const drawBoxes = useCallback((dets: Detection[]) => {
@@ -349,6 +386,11 @@ const App: React.FC = () => {
 
   // ─── LOG DETECTION TO SPREADSHEET ───
   const logDetectionToSpreadsheet = (det: Detection, customNotes?: string) => {
+    const officerName = currentUser?.profile?.firstName
+      ? `${currentUser.profile.firstName} ${currentUser.profile.lastName || ""}`.trim()
+      : currentUser?.username || "Authorized Verifier";
+    const badge = currentUser?.profile?.badgeNumber || "ID-OFFICER";
+
     const newRecord: WasteRecord = {
       id: `TACO-${Math.floor(100 + Math.random() * 900)}`,
       timestamp: new Date().toLocaleString(),
@@ -360,11 +402,12 @@ const App: React.FC = () => {
       quantity: 1,
       unit: "pcs",
       notes: customNotes || det.circular_action || "Classified using TACO Engine",
-      material: det.material || "Recoverable Material"
+      material: det.material || "Recoverable Material",
+      loggedBy: `${officerName} (${badge})`
     };
 
     setRecords((prev) => [newRecord, ...prev]);
-    showToast(`Logged to Spreadsheet: ${newRecord.itemName} (${newRecord.category})`);
+    showToast(`Logged to Sheet: ${newRecord.itemName} (${newRecord.category})`);
   };
 
   // ─── SPREADSHEET OPERATIONS ───
@@ -376,7 +419,20 @@ const App: React.FC = () => {
       return;
     }
 
-    const headers = ["ID", "Timestamp", "TACO Item Name", "TACO Supercategory", "Category", "Bin Destination", "Confidence (%)", "Quantity", "Unit", "Material", "Notes"];
+    const headers = [
+      "ID",
+      "Timestamp",
+      "TACO Item Name",
+      "TACO Supercategory",
+      "Category",
+      "Bin Destination",
+      "Confidence (%)",
+      "Quantity",
+      "Unit",
+      "Material",
+      "Verified By Officer",
+      "Notes"
+    ];
     const rows = records.map((r) => [
       `"${r.id}"`,
       `"${r.timestamp}"`,
@@ -388,6 +444,7 @@ const App: React.FC = () => {
       r.quantity,
       `"${r.unit}"`,
       `"${(r.material || "").replace(/"/g, '""')}"`,
+      `"${(r.loggedBy || "").replace(/"/g, '""')}"`,
       `"${(r.notes || "").replace(/"/g, '""')}"`,
     ]);
 
@@ -396,11 +453,11 @@ const App: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `WasteWise_TACO_Spreadsheet_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute("download", `WasteWise_TACO_Report_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast("Downloaded TACO Spreadsheet (CSV)");
+    showToast("Downloaded Official TACO Report (CSV)");
   };
 
   // 2. Download JSON Backup
@@ -452,7 +509,8 @@ const App: React.FC = () => {
                 quantity: parseFloat(cols[7]) || 1,
                 unit: cols[8] || "pcs",
                 material: cols[9] || "Recoverable Material",
-                notes: cols[10] || "Imported from CSV",
+                loggedBy: cols[10] || "External Import",
+                notes: cols[11] || "Imported from CSV",
               });
             }
           }
@@ -512,6 +570,11 @@ const App: React.FC = () => {
 
   // 8. Add Manual Entry
   const openNewManualRecord = () => {
+    const officerName = currentUser?.profile?.firstName
+      ? `${currentUser.profile.firstName} ${currentUser.profile.lastName || ""}`.trim()
+      : currentUser?.username || "Officer";
+    const badge = currentUser?.profile?.badgeNumber || "ID-MANUAL";
+
     const fresh: WasteRecord = {
       id: `TACO-${Math.floor(100 + Math.random() * 900)}`,
       timestamp: new Date().toLocaleString(),
@@ -523,7 +586,8 @@ const App: React.FC = () => {
       quantity: 1,
       unit: "pcs",
       notes: "Manually cataloged TACO entry",
-      material: "Polypropylene Plastic"
+      material: "Polypropylene Plastic",
+      loggedBy: `${officerName} (${badge})`
     };
     setEditingRecord(fresh);
     setEditModalOpen(true);
@@ -541,6 +605,7 @@ const App: React.FC = () => {
         (r.tacoSupercat && r.tacoSupercat.toLowerCase().includes(q)) ||
         r.bin.toLowerCase().includes(q) ||
         (r.material && r.material.toLowerCase().includes(q)) ||
+        (r.loggedBy && r.loggedBy.toLowerCase().includes(q)) ||
         r.notes.toLowerCase().includes(q);
       return matchCat && matchQuery;
     });
@@ -571,7 +636,23 @@ const App: React.FC = () => {
     return { total, bio, rec, haz, avgConf };
   }, [records]);
 
+  // If not logged in, display Auth Screen
+  if (authChecking) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p style={{ color: "var(--muted)", fontWeight: 600 }}>Verifying Identifier Authorization...</p>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <AuthScreen onLoginSuccess={(u) => setCurrentUser(u)} />;
+  }
+
   const topDetection = detections[0];
+  const officerDisplayName = currentUser.profile?.firstName
+    ? `${currentUser.profile.firstName} ${currentUser.profile.lastName || ""}`.trim()
+    : currentUser.username;
 
   return (
     <>
@@ -598,7 +679,7 @@ const App: React.FC = () => {
               </span>
             </div>
             <div style={{ fontSize: "0.68rem", color: "var(--muted)", fontWeight: 500 }}>
-              Trash Annotations in Context (60 Classes / 28 Supercategories)
+              Waste Identifier & Verification Hub (60 TACO Classes)
             </div>
           </div>
         </div>
@@ -639,20 +720,66 @@ const App: React.FC = () => {
             <BookOpen size={14} /> TACO Classes ({tacoTaxonomy.length || 60})
           </button>
 
-          {/* Backend status */}
-          <div className={`status-pill ${backendOk ? "online" : "offline"}`}>
-            <span className="status-dot" />
-            {backendOk ? "TACO Engine Online" : "Backend Offline"}
+          {/* User Profile Widget */}
+          <div className="user-profile-widget">
+            <div className={`user-avatar-badge ${currentUser.role === "admin" ? "admin" : ""}`}>
+              {currentUser.role === "admin" ? <ShieldCheck size={16} /> : <BadgeCheck size={16} />}
+            </div>
+            <div className="user-info-meta">
+              <span className="user-name-title">{officerDisplayName}</span>
+              <span className={`user-role-badge-tag ${currentUser.role === "admin" ? "admin" : ""}`}>
+                {currentUser.role === "admin" ? "Administrator" : `Identifier • ${currentUser.profile?.badgeNumber || "ID"}`}
+              </span>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="logout-btn"
+              title="Sign Out of Identifier Portal"
+            >
+              <LogOut size={13} /> Logout
+            </button>
           </div>
         </div>
       </header>
 
       {/* ─── MAIN CONTAINER ─── */}
       <div className="app-container">
+        {/* Verification Station Info Banner */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: "hsla(0, 0%, 100%, 0.65)",
+            padding: "8px 16px",
+            borderRadius: 12,
+            border: "1px solid var(--border)",
+            marginBottom: 16,
+            fontSize: "0.8rem",
+            color: "var(--muted)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <UserCheck size={15} color="#16a34a" />
+            <span>
+              Active Identifier: <b>{officerDisplayName}</b> ({currentUser.profile?.badgeNumber || "ID-7842"})
+            </span>
+            <span>•</span>
+            <span>Facility: <b>{currentUser.profile?.facilityZone || "Central Processing Station"}</b></span>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span className="status-dot" style={{ background: backendOk ? "#22c55e" : "#ef4444" }} />
+            <span style={{ fontWeight: 600, color: backendOk ? "var(--eco-green)" : "var(--eco-red)" }}>
+              {backendOk ? "TACO Engine Active (Port 8000)" : "Backend Offline"}
+            </span>
+          </div>
+        </div>
+
         {/* KPI Metrics Dashboard Bar */}
         <div className="kpi-grid">
           <div className="kpi-card">
-            <span className="kpi-title">Total Classified</span>
+            <span className="kpi-title">Total Verified</span>
             <span className="kpi-value">{stats.total}</span>
             <span className="kpi-sub">Spreadsheet entries</span>
           </div>
@@ -913,7 +1040,7 @@ const App: React.FC = () => {
                   <Search size={16} />
                   <input
                     type="text"
-                    placeholder="Search by TACO Item, Supercategory, Bin, Material..."
+                    placeholder="Search by TACO Item, Officer, Supercat, Material..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="search-input"
@@ -1041,6 +1168,7 @@ const App: React.FC = () => {
                       <th>Destination Bin</th>
                       <th>Confidence</th>
                       <th>Qty</th>
+                      <th>Verified By Officer</th>
                       <th>Material / Notes</th>
                       <th style={{ textAlign: "center" }}>Actions</th>
                     </tr>
@@ -1107,6 +1235,9 @@ const App: React.FC = () => {
                           <td style={{ fontWeight: 600 }}>
                             {row.quantity} {row.unit}
                           </td>
+                          <td style={{ fontSize: "0.78rem", color: "var(--primary-dark)", fontWeight: 600 }}>
+                            {row.loggedBy || "Verifier"}
+                          </td>
                           <td
                             style={{
                               maxWidth: 180,
@@ -1144,7 +1275,7 @@ const App: React.FC = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={11} className="empty-table">
+                        <td colSpan={12} className="empty-table">
                           <FileSpreadsheet size={32} style={{ margin: "0 auto 8px", color: "var(--muted)" }} />
                           <p style={{ fontWeight: 600, color: "var(--foreground)" }}>
                             No spreadsheet records match your search

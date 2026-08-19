@@ -15,7 +15,7 @@ const generateToken = (id) => {
 // @desc    Register a new user
 router.post('/register', async (req, res) => {
   try {
-    const { username, email, password, role, profile } = req.body;
+    const { username, email, password, role, profile, authCode } = req.body;
 
     // Validation
     if (!username || !email || !password || !role) {
@@ -23,6 +23,25 @@ router.post('/register', async (req, res) => {
         success: false,
         message: 'Please provide all required fields'
       });
+    }
+
+    // Strong authorization logic for Identifier / Admin
+    if (role === 'identifier') {
+      const validIdentifierCodes = ['IDENTIFIER-2026', 'TACO-VERIFY', 'WASTEWISE-ID', 'MCD-IDENTIFIER'];
+      if (!authCode || !validIdentifierCodes.includes(authCode.trim().toUpperCase())) {
+        return res.status(403).json({
+          success: false,
+          message: 'Invalid Identifier Authorization Passcode. Authorized identifier access required.'
+        });
+      }
+    } else if (role === 'admin') {
+      const validAdminCodes = ['MCD-ADMIN-2026', 'ADMIN-ROOT-2026', 'WASTEWISE-ADMIN'];
+      if (!authCode || !validAdminCodes.includes(authCode.trim().toUpperCase())) {
+        return res.status(403).json({
+          success: false,
+          message: 'Invalid Administrator Security Key.'
+        });
+      }
     }
 
     // Check if user exists
@@ -33,7 +52,7 @@ router.post('/register', async (req, res) => {
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'User already exists'
+        message: 'User already exists with this email or username'
       });
     }
 
@@ -41,15 +60,22 @@ router.post('/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // Build profile with auto-generated badge if identifier
+    const userProfile = {
+      ...(profile || {}),
+      badgeNumber: profile?.badgeNumber || (role === 'identifier' ? `ID-${Math.floor(1000 + Math.random() * 9000)}` : undefined)
+    };
+
     // Create user
     const user = await User.create({
       username,
       email,
       password: hashedPassword,
       role,
-      profile: profile || {},
-      rewardPoints: role === 'citizen' ? 0 : 0,
-      level: 1
+      profile: userProfile,
+      rewardPoints: role === 'citizen' ? 0 : 500,
+      level: role === 'identifier' ? 5 : 1,
+      isVerified: true
     });
 
     // Generate token
@@ -57,6 +83,7 @@ router.post('/register', async (req, res) => {
 
     res.status(201).json({
       success: true,
+      message: `${role.toUpperCase()} registered successfully`,
       data: {
         user: {
           id: user._id,
@@ -86,10 +113,10 @@ router.post('/login', async (req, res) => {
     const { email, password, role } = req.body;
 
     // Validation
-    if (!email || !password || !role) {
+    if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide email, password, and role'
+        message: 'Please provide email and password'
       });
     }
 
@@ -103,11 +130,11 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Check role
-    if (user.role !== role) {
-      return res.status(401).json({
+    // Role check: if role is specified, verify it matches
+    if (role && user.role !== role) {
+      return res.status(403).json({
         success: false,
-        message: 'Invalid role for this account'
+        message: `Account role is '${user.role}', but tried logging in as '${role}'`
       });
     }
 
